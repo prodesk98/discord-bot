@@ -4,7 +4,11 @@ WORKDIR /app
 
 COPY .. .
 
-RUN apt update && pip install --no-cache-dir --upgrade -r requirements.txt --verbose
+RUN apt-get update && apt install -y build-essential && \
+    apt-get install -y ffmpeg
+
+RUN apt update && pip install --upgrade pip && \
+    pip install --no-cache-dir --upgrade -r requirements.txt --verbose
 
 RUN chmod +x entrypoint.sh
 
