@@ -7,3 +7,4 @@ SQLAlchemy==2.0.25
 sqlalchemy[asyncio]
 alembic==1.13.1
 pynacl==1.5.0
+aiohttp~=3.9.1
