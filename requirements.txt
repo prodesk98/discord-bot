@@ -1,7 +1,9 @@
-python-dotenv
+python-dotenv~=1.0.0
 loguru==0.7.2
 discord.py==2.3.2
 pydantic==2.5.3
-psycopg2-binary==2.9.9
+asyncpg==0.29.0
 SQLAlchemy==2.0.25
+sqlalchemy[asyncio]
 alembic==1.13.1
+pynacl==1.5.0
