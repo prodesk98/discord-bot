@@ -20,9 +20,10 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.create_table(
         "users",
-        sa.Column("id", sa.INTEGER, primary_key=True, autoincrement=True, nullable=False, unique=True),
-        sa.Column("discord_user_id", sa.VARCHAR(100), unique=True, nullable=False),
+        sa.Column("id", sa.Integer, primary_key=True, autoincrement=True, nullable=False, unique=True),
+        sa.Column("discord_user_id", sa.VARCHAR(32), unique=True, nullable=False),
         sa.Column("discord_username", sa.VARCHAR(50), unique=True, nullable=False),
+        sa.Column("discord_nick", sa.VARCHAR(50), unique=True, nullable=False),
         sa.Column("received_initial_coins", sa.Boolean(True), default=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now())
