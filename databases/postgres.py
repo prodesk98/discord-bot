@@ -29,7 +29,6 @@ class User(Base):
     discord_user_id = Column(String(32))
     discord_username = Column(String(50))
     discord_nick = Column(String(50))
-    received_initial_coins = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
