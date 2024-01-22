@@ -24,7 +24,6 @@ def upgrade() -> None:
         sa.Column("discord_user_id", sa.VARCHAR(32), unique=True, nullable=False),
         sa.Column("discord_username", sa.VARCHAR(50), unique=True, nullable=False),
         sa.Column("discord_nick", sa.VARCHAR(50), unique=True, nullable=False),
-        sa.Column("received_initial_coins", sa.Boolean(True), default=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now())
     )
