@@ -1,1 +1,2 @@
 from .play_audio import PlayAudioEffect
+from .permissions import has_bot_manager_permissions
