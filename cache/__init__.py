@@ -1,0 +1,1 @@
+from .cache_redis import aget, aset, adel
