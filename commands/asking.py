@@ -1,11 +1,11 @@
 from discord import Embed, Interaction
 from aiohttp import ClientSession
-from databases import async_session, User
+from databases import async_session, User, Scores
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from typing import Union
 
-from utils import registerCoinHistory, hasCoinsAvailable
+from utils import registerCoinHistory, hasCoinsAvailable, hasLevelPermissions
 
 from config import env
 
@@ -25,6 +25,23 @@ async def AskingCommand(
                 color=0xE02B2B
             ))
             return None
+
+    score = (
+        await session.execute(
+            select(func.sum(Scores.amount)).where(
+                Scores.user_id == user.id
+            )
+        )
+    ).scalar()
+    score = 0 if score is None else score
+    if not hasLevelPermissions(score, 2):
+        await interaction.edit_original_response(embed=Embed(
+            title="Nível baixo!",
+            description="Você precisa ter no mínimo 2 Níveis para executar esse comando.",
+            color=0xE02B2B
+        ))
+        return None
+
 
     if not (await hasCoinsAvailable(async_session, user.id, AskingCost)):
         await interaction.edit_original_response(embed=Embed(

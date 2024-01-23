@@ -67,7 +67,7 @@ async def CoinsCommand(
                 rescues_in_hours = 24 if rescues_in_hours > 24 else rescues_in_hours
                 score_received += 20.0
                 total_rescue = float(f"{(hourly_earnings * rescues_in_hours):.2f}")
-                rescue_message = f"Você resgatou **{total_rescue} coins**.\nReceba +{hourly_earnings} coins por hora (acumula até 24).\n+20 xp por resgate a cada 1 hora(não acumula)."
+                rescue_message = f"Você resgatou **{total_rescue} coins**.\nReceba +{hourly_earnings} coins por hora (acumula até 24).\n\n+20xp (expira em 30 dias) por resgate a cada 1 hora (não acumula)."
                 session.add(
                     CoinsHistory(
                         user_id=user.id,
@@ -87,6 +87,7 @@ async def CoinsCommand(
 
     lvl = scoreToLevel(score)
     file = File(f"assets/gifs/{lvl}.gif", filename=f"{lvl}.gif")
+
     if not is_member:
         coins_welcome = 100
         async with async_session as session:
@@ -109,7 +110,7 @@ async def CoinsCommand(
         return embed, file
 
     embed = Embed(
-        title=f"{LevelSticker(lvl)} {LevelNumber(lvl)} Nível",
+        title=f"{LevelSticker(lvl)} {LevelNumber(lvl)}º Nível",
         description=f"{rescue_message}\n\n** :zap:{score:.2f}** xp\n**:coin: {balance:.2f}** coins",
         color=0xF5D920
     )

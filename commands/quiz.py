@@ -2,7 +2,7 @@ from discord import Embed, Interaction, ui, ButtonStyle, File
 from typing import List, Dict
 
 from aiohttp import ClientSession
-from databases import async_session, User, Quizzes
+from databases import async_session, User, Quizzes, Scores
 
 from sqlalchemy import select
 from typing import Union
@@ -10,8 +10,10 @@ from typing import Union
 from cache import aget, aset
 from orjson import dumps, loads
 
-from utils import registerQuizzesHistory, registerCoinHistory, PlayAudioEffect
+from utils import registerQuizzesHistory, registerCoinHistory, registerScore, PlayAudioEffect, getStickerByIdUser
 from config import env
+
+from random import randint
 
 
 ALTERNATIVES_LABEL = {
@@ -207,20 +209,26 @@ async def QuizFinished(
 
     awarded = ''
     losers = ''
-    score = 20
     for bet in bets:
         discord_id = bet.get("discord_id", "")
         user_id = bet.get("user_id", 0)
         choice = bet.get("choice", -1)
         if 0 < choice == quiz.truth:
-            awarded += f'\n<@{discord_id}> +{score}:zap:'
+            score = randint(10, 20)
+            awarded += f'\n{await getStickerByIdUser(async_session, user_id)} <@{discord_id}> +{score}xp:zap:'
             await registerCoinHistory(
                 async_session,
                 user_id=user_id,
                 amount=total_prize
             )
+            await registerScore(
+                async_session,
+                user_id=user_id,
+                amount=score
+            )
         else:
-            losers += f'\n({ALTERNATIVES_NUMBER[choice] if choice > 0 else "(-)"}) <@{discord_id}>'
+            losers += (f'\n({ALTERNATIVES_NUMBER[choice] if choice > 0 else "(-)"})'
+                       f'{await getStickerByIdUser(async_session, user_id)} <@{discord_id}>')
 
     embed.add_field(name=":trophy: Acertos", value=awarded, inline=True)
     embed.add_field(name=":x: Erros", value=losers, inline=True)
