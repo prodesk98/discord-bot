@@ -3,16 +3,25 @@ version: "3.5"
 services:
   bot:
     container_name: bot
+    restart: always
     build:
       context: .
       dockerfile: Docker/bot.Dockerfile
-    restart: always
     env_file:
       - .env
     environment:
       POSTGRES_DSN: "postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@postgres:5432/bot"
+      REDIS_DSN: "redis://root:${REDIS_PASSWORD}@cache:6379/0"
     volumes:
       - ./:/app
+
+  cache:
+    image: redis:latest
+    restart: always
+    ports:
+      - '6379:6379'
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
 
   postgres:
     container_name: postgres

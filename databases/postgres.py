@@ -47,9 +47,18 @@ class Quizzes(Base):
 
     id = Column(Integer, Sequence("quizzes_id_seq"), primary_key=True)
     status = Column(Integer)
+    amount = Column(Integer)
     theme = Column(String(100))
     question = Column(String(100))
     alternatives = Column(JSON)
     truth = Column(Integer)
-    voice_url = Column(String(1000), nullable=True, default=True)
+    voice_url = Column(String(1000), nullable=True, default=None)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class Scores(Base):
+    __tablename__ = 'scores'
+
+    id = Column(Integer, Sequence("scores_id_seq"), primary_key=True)
+    amount = Column(Integer)
+    user_id = Column(Integer)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

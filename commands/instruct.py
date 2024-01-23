@@ -19,7 +19,7 @@ async def InstructCommand(
         if user is None:
             await interaction.edit_original_response(embed=Embed(
                 title="Acesso bloqueado!",
-                description="Você precisa ter uma conta para executar esse comando.\n\nExecute /coins",
+                description="Você precisa ter uma conta para executar esse comando.\n\nExecute /me",
                 color=0xE02B2B
             ))
             return None, None

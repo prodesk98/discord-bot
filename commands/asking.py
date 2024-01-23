@@ -14,20 +14,22 @@ async def AskingCommand(
     interaction: Interaction,
     question: str
 ) -> Embed:
+    AskingCost = env.ASKING_COST
+
     async with async_session as session:
         user: Union[User, None] = (await session.execute(select(User).where(User.discord_user_id == str(interaction.user.id)))).scalars().one_or_none()
         if user is None:
             await interaction.edit_original_response(embed=Embed(
                 title="Acesso bloqueado!",
-                description="Você precisa ter uma conta para executar esse comando.\n\nExecute /coins",
+                description="Você precisa ter uma conta para executar esse comando.\n\nExecute /me",
                 color=0xE02B2B
             ))
             return None
 
-    if not (await hasCoinsAvailable(async_session, user.id, 20)):
+    if not (await hasCoinsAvailable(async_session, user.id, AskingCost)):
         await interaction.edit_original_response(embed=Embed(
             title="Sem saldo",
-            description="Você precisa de 20 coins para executar esse comando.\n\nExecute /coins",
+            description="Você precisa de 20 coins para executar esse comando.\n\nExecute /me",
             color=0xE02B2B
         ))
         return None
@@ -41,7 +43,7 @@ async def AskingCommand(
         }) as response:
             if response.ok:
                 data: dict = await response.json()
-                await registerCoinHistory(async_session, user.id, -20)
+                await registerCoinHistory(async_session, user.id, -AskingCost)
                 return Embed(
                     title="🤖 ROBÔ RESPONDE",
                     description=f"**Pergunta: ** %s\n\n**Resposta: ** %s" % (
@@ -58,4 +60,3 @@ async def AskingCommand(
             color=0xE02B2B
         )
     )
-    return None
