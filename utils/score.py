@@ -13,6 +13,22 @@ async def registerScore(async_session: AsyncSession, user_id: int, amount: int) 
         )
         await session.commit()
 
+async def getStickerByIdUser(async_session, user_id: int) -> str:
+    async with async_session as session:
+        score = (
+            await session.execute(
+                select(func.sum(Scores.amount)).where(
+                    Scores.user_id == user_id
+                )
+            )
+
+        ).scalar()
+        score = 0 if score is None else score
+        return LevelSticker(scoreToLevel(score))
+
+def hasLevelPermissions(score: int, minimo: int = 1) -> bool:
+    return LevelNumber(scoreToLevel(score)) >= minimo
+
 def scoreToLevel(score: int) -> str:
     LEVELS = {
         0: "coin",
