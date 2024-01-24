@@ -12,6 +12,4 @@ RUN apt-get update && apt install -y build-essential && \
 RUN apt update && pip install --upgrade pip && \
     pip install --no-cache-dir --upgrade -r requirements.txt --verbose
 
-RUN chmod +x entrypoint.sh
-
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["python", "scheduler.py"]

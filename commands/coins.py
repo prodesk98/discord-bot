@@ -1,8 +1,6 @@
-import asyncio
-
 from discord import Interaction, Embed, File
 from sqlalchemy import select, func
-from sqlalchemy.sql import text, desc
+from sqlalchemy.sql import desc
 
 from databases import async_session, CoinsHistory, User, Scores
 
@@ -24,9 +22,9 @@ async def CoinsCommand(
 
     async with async_session as session:
         user = await session.execute(select(User).where(
-            User.discord_user_id == str(interaction.user.id)
+            User.discord_user_id == str(interaction.user.id) #type: ignore
         ))
-        user = user.scalars().one_or_none()
+        user = user.scalar()
         is_member = user is not None
         if not is_member:
             user = User(
@@ -53,21 +51,22 @@ async def CoinsCommand(
             ).scalar()
             score = 0 if score is None else score
 
-            lastCoinHistory: datetime = (await session.execute(
+            last_coin_history: datetime = (await session.execute(
                 select(CoinsHistory.created_at).where(CoinsHistory.user_id == user.id).order_by(
-                    desc(CoinsHistory.created_at)
+                    desc(CoinsHistory.created_at) #type: ignore
                 )
             )).scalar()
 
-            coin_history_timestamp = lastCoinHistory.timestamp()
+            coin_history_timestamp = last_coin_history.timestamp()
             rescues_in_hours = (datetime.now().timestamp() - coin_history_timestamp) / 3600
             hourly_earnings = env.HOURLY_EARNINGS
+            hourly_score = 20
 
             if rescues_in_hours >= 1:
                 rescues_in_hours = 24 if rescues_in_hours > 24 else rescues_in_hours
-                score_received += 20.0
+                score_received += hourly_score
                 total_rescue = float(f"{(hourly_earnings * rescues_in_hours):.2f}")
-                rescue_message = f"Você resgatou **{total_rescue} coins**.\nReceba +{hourly_earnings} coins por hora (acumula até 24).\n\n+20xp (expira em 30 dias) por resgate a cada 1 hora (não acumula)."
+                rescue_message = f"Você resgatou **{total_rescue} coins** +{hourly_score}xp:zap:\nReceba +{hourly_earnings} coins por hora (acumula até 24 horas).\n\n**+{hourly_score}xp** por resgate a cada 1 hora (acumula até 1 hora)."
                 session.add(
                     CoinsHistory(
                         user_id=user.id,

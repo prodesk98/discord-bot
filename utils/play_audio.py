@@ -1,6 +1,6 @@
 import asyncio
 
-from discord import Interaction, FFmpegOpusAudio, VoiceState, VoiceClient, AudioSource, utils
+from discord import Interaction, FFmpegOpusAudio, VoiceState, VoiceClient, utils
 from pathlib import Path
 
 from .permissions import has_bot_manager_permissions

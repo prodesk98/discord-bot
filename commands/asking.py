@@ -13,11 +13,16 @@ from config import env
 async def AskingCommand(
     interaction: Interaction,
     question: str
-) -> Embed:
-    AskingCost = env.ASKING_COST
+) -> Embed|None:
+    asking_cost = env.ASKING_COST
 
     async with async_session as session:
-        user: Union[User, None] = (await session.execute(select(User).where(User.discord_user_id == str(interaction.user.id)))).scalars().one_or_none()
+        user: Union[User, None] = (
+            await session.execute(
+                select(User)
+                .where(User.discord_user_id == str(interaction.user.id))) #type: ignore
+        ).scalar()
+
         if user is None:
             await interaction.edit_original_response(embed=Embed(
                 title="Acesso bloqueado!",
@@ -29,7 +34,7 @@ async def AskingCommand(
     score = (
         await session.execute(
             select(func.sum(Scores.amount)).where(
-                Scores.user_id == user.id
+                Scores.user_id == user.id  #type: ignore
             )
         )
     ).scalar()
@@ -43,7 +48,7 @@ async def AskingCommand(
         return None
 
 
-    if not (await hasCoinsAvailable(async_session, user.id, AskingCost)):
+    if not (await hasCoinsAvailable(async_session, user.id, asking_cost)):
         await interaction.edit_original_response(embed=Embed(
             title="Sem saldo",
             description="Você precisa de 20 coins para executar esse comando.\n\nExecute /me",
@@ -60,7 +65,7 @@ async def AskingCommand(
         }) as response:
             if response.ok:
                 data: dict = await response.json()
-                await registerCoinHistory(async_session, user.id, -AskingCost)
+                await registerCoinHistory(async_session, user.id, -asking_cost)
                 return Embed(
                     title="🤖 ROBÔ RESPONDE",
                     description=f"**Pergunta: ** %s\n\n**Resposta: ** %s" % (

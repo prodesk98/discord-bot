@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict
+from typing import Optional
 
 from pydantic import BaseModel, PostgresDsn, RedisDsn
 from os import getenv
@@ -18,6 +18,7 @@ class Settings(BaseModel):
     LEARN_BOT_ENABLED: Optional[bool] = bool(getenv("LEARN_BOT_ENABLED", "true") == "true")
     ASKING_COST: Optional[int] = int(getenv("ASKING_COST", 20))
     QUIZ_MULTIPLIER: Optional[int] = int(getenv("QUIZ_MULTIPLIER", 3))
+    LIMIT_OPEN_QUIZ_BY_TIME: Optional[int] = int(getenv("LIMIT_OPEN_QUIZ_BY_TIME"))
 
 
 env = Settings()

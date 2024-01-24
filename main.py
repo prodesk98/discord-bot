@@ -2,7 +2,7 @@ from discord.ext import commands, tasks
 from discord.ext.commands import Context
 from discord import (
     Intents, Embed, Interaction,
-    app_commands, File
+    app_commands, File, Attachment, Message
 )
 
 from config import env
@@ -13,13 +13,20 @@ from commands import (
     InstructCommand,
     AskingCommand,
     QuizCommand,
-    QuizFinished
+    QuizFinished,
+    RankingCommand,
+    BettingEventCommand
 )
 from utils import has_bot_manager_permissions
 from cache import aget, adel
 from orjson import loads
+from datetime import datetime
+from manager import QuizManager
+from re import findall
 
 intents = Intents.default()
+intents.message_content = True
+intents.guild_messages = True
 
 class Bot(commands.Bot):
     def __init__(self) -> None:
@@ -36,8 +43,32 @@ class Bot(commands.Bot):
     async def setup_hook(self) -> None:
         logger.info(f"Logged in as {self.user.name}")
 
+    async def on_message(self, message: Message) -> None:
+        if message.author.bot:
+            return
+        bet_opened = await aget("event:bet:opened")
+        if bet_opened is not None:
+            result = findall(r"-?\d+\.?\d*", message.content)
+            if len(result) > 0:
+                await message.reply(content=f"Você apostou {result[0]} coins.")
+
 
 bot = Bot()
+
+@bot.tree.command(
+    name="betting",
+    description="Criar um evento de aposta"
+)
+@app_commands.checks.cooldown(1, 60, key=lambda i: (i.guild_id, i.user.id))
+async def betting(interaction: Interaction, nome: str, capa: Attachment, a: str, b: str):
+    if not has_bot_manager_permissions(interaction.user.roles):
+        raise Exception("Você não tem permissão para criar um evento.")
+    valid_content_types = ["image/gif", "image/jpeg"]
+    if capa.content_type not in valid_content_types:
+        raise Exception("Formato inválido! Válidos: %s" % ", ".join([f for f in valid_content_types]))
+    await interaction.response.defer(ephemeral=False)
+    embed, view, file, event_id = await BettingEventCommand(interaction, nome, capa, a, b)
+    await interaction.edit_original_response(embed=embed, view=view, attachments=[file])
 
 @bot.tree.command(
     name="quiz",
@@ -67,45 +98,36 @@ async def quiz(interaction: Interaction, tema: str, premio: int):
 
     QuizManager(quiz_id, interaction).quizStatus.start()
 
-class QuizManager(commands.Cog):
-    def __init__(self, quiz_id: int, interaction: Interaction):
-        self.counter = 0
-        self.quiz_id = quiz_id
-        self.interaction = interaction
-        self.ABCD = {
-            0: "A",
-            1: "B",
-            2: "C",
-            3: "D"
-        }
+@bot.tree.command(
+    name="level",
+    description="Informações sobre xp e níveis"
+)
+@app_commands.checks.cooldown(1, 10.0, key=lambda i: (i.guild_id, i.user.id))
+async def level(interaction: Interaction):
+    description = """:egg: (Egg) **1º Nível** - 0xp até 50xp
+:crossed_swords: (Warrior) **2º Nível** - 51xp até 500xp
+:gem: (Nobility) **3º Nível** - 501xp até 1000xp
+:crown: (King) **4º Nível** - 1001xp+
 
-    @tasks.loop(seconds=1.0)
-    async def quizStatus(self):
-        quizOpened = await aget(f"quiz:open_bets:{self.quiz_id}")
-        if quizOpened is None:
-            await QuizFinished(self.interaction, self.quiz_id, loads(await aget("quiz:opened"))["bets"])
-            await adel(f"quiz:open_bets:{self.quiz_id}", "quiz:opened")
-            self.quizStatus.cancel()
-            return
-        self.counter += 1
+:warning: Os pontos de experiência (XP) têm uma validade de **15 dias**. Certifique-se de **permanecer ativo** para evitar a **perda de níveis**.
 
-        data: dict = loads(quizOpened)
-        embed = Embed(
-            title=data.get("question", "").capitalize(),
-            description="**Prêmio: ** :coin: %.2f coins **%iX**\n**Bilhete: ** :tickets: %.2f" % (
-                data.get("amount", 0) * env.QUIZ_MULTIPLIER,
-                env.QUIZ_MULTIPLIER,
-                data.get("amount", 0)
-            ),
-            color=0x147BBD
-        )
+Exiba o ranking do canal executando o comando /ranking."""
 
-        alternatives = data.get("alternatives", [])
-        for q, alternative in enumerate(alternatives):
-            embed.add_field(name=f"{self.ABCD.get(q)}) {alternative}"[:256], value="", inline=False)
+    embed = Embed(
+        title="Níveis e pontos de experiência".upper(),
+        description=description
+    )
+    await interaction.response.send_message(embed=embed, ephemeral=False)
 
-        embed.set_footer(text=f"Encerra em {15 - self.counter} segundos...")
-        await self.interaction.edit_original_response(embed=embed)
+@bot.tree.command(
+    name="ranking",
+    description="Exiba o ranking do canal"
+)
+@app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id))
+async def ranking(interaction: Interaction):
+    await interaction.response.defer(ephemeral=True)
+    embed = await RankingCommand(interaction)
+    await interaction.edit_original_response(embed=embed)
 
 @bot.tree.command(
     name="asking",
@@ -181,6 +203,9 @@ async def me(interaction: Interaction):
     await interaction.edit_original_response(embed=embed, content="", attachments=[file])
 
 @ping.error
+@level.error
+@ranking.error
+@betting.error
 @me.error
 @instruct.error
 @asking.error

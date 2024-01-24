@@ -1,8 +1,8 @@
-from discord import Embed, Interaction, ui, ButtonStyle, File
+from discord import Embed, Interaction, ui, ButtonStyle
 from typing import List, Dict
 
 from aiohttp import ClientSession
-from databases import async_session, User, Quizzes, Scores
+from databases import async_session, User, Quizzes
 
 from sqlalchemy import select
 from typing import Union
@@ -31,31 +31,33 @@ ALTERNATIVES_NUMBER = {
 }
 
 
-class ViewQuizButtons(ui.View):
+class ViewChoiceButtons(ui.View):
     def __init__(self, quiz_id: int):
         super().__init__(timeout=None)
         self.quiz_id = quiz_id
 
-    @ui.button(label="A", style=ButtonStyle.primary)
+    @ui.button(label="A", style=ButtonStyle.primary, custom_id="A")
     async def A(self, interaction: Interaction, button: ui.Button):
-        await self.bet(interaction, button, "A")
+        await self.bet(interaction, button)
 
-    @ui.button(label="B", style=ButtonStyle.primary)
+    @ui.button(label="B", style=ButtonStyle.primary, custom_id="B")
     async def B(self, interaction: Interaction, button: ui.Button):
-        await self.bet(interaction, button, "B")
+        await self.bet(interaction, button)
 
-    @ui.button(label="C", style=ButtonStyle.primary)
+    @ui.button(label="C", style=ButtonStyle.primary, custom_id="C")
     async def C(self, interaction: Interaction, button: ui.Button):
-        await self.bet(interaction, button, "C")
+        await self.bet(interaction, button)
 
-    @ui.button(label="D", style=ButtonStyle.primary)
+    @ui.button(label="D", style=ButtonStyle.primary, custom_id="D")
     async def D(self, interaction: Interaction, button: ui.Button):
-        await self.bet(interaction, button, "D")
+        await self.bet(interaction, button)
 
-    async def bet(self, interaction: Interaction, button: ui.Button, id: str):
-        quizCache = await aget("quiz:opened")
-        if quizCache is None:
-            await interaction.response.send_message(embed=Embed(
+    async def bet(self, interaction: Interaction, button: ui.Button):
+        choice = int(ALTERNATIVES_LABEL.get(button.custom_id, -1))
+        print(f"[QUIZ BUTTON EVENT] {interaction.user.nick} chose {button.custom_id}")
+        quiz_cache = await aget("quiz:opened")
+        if quiz_cache is None:
+            await interaction.response.send_message(embed=Embed( # type: ignore
                 title="Quiz fechado!",
                 description="Você não pode participar de um quiz que já foi finalizado.",
                 color=0xE02B2B
@@ -64,9 +66,9 @@ class ViewQuizButtons(ui.View):
 
         async with async_session as session:
             user: Union[User, None] = (await session.execute(
-                select(User).where(User.discord_user_id == str(interaction.user.id)))).scalars().one_or_none()
+                select(User).where(User.discord_user_id == str(interaction.user.id)))).scalar() # type: ignore
             if user is None:
-                await interaction.response.send_message(embed=Embed(
+                await interaction.response.send_message(embed=Embed( # type: ignore
                     title="Acesso bloqueado!",
                     description="Você precisa ter uma conta para executar esse comando.\n\nExecute /me",
                     color=0xE02B2B
@@ -75,25 +77,25 @@ class ViewQuizButtons(ui.View):
 
         bet = await aget(f"quiz:{self.quiz_id}:bet:{user.discord_user_id}")
         if bet is not None:
-            await interaction.response.send_message(embed=Embed(
+            await interaction.response.send_message(embed=Embed( # type: ignore
                 title="Você não tem permissão!",
                 description="Você já escolheu uma alternativa.",
                 color=0xE02B2B
             ), ephemeral=True)
             return
 
-        data: dict = loads(quizCache)
+        data: dict = loads(quiz_cache)
         data.get("bets", []).append(
             {
                 "discord_id": user.discord_user_id,
                 "id": user.discord_user_id,
                 "user_id": user.id,
-                "choice": ALTERNATIVES_LABEL.get(id, -1)
+                "choice": choice
             }
         )
         await aset("quiz:opened", dumps(data), ex=30)
         await aset(f"quiz:{self.quiz_id}:bet:{user.discord_user_id}", dumps({"bet": 1}), ex=60)
-        await interaction.response.send_message(f"Você escolheu a alternativa **{id}**.", ephemeral=True)
+        await interaction.response.send_message(f"Você escolheu a alternativa **{ALTERNATIVES_NUMBER[choice]}**.", ephemeral=True) # type: ignore
 
 
 
@@ -101,11 +103,10 @@ async def QuizCommand(
     interaction: Interaction,
     theme: str,
     amount: int
-) -> tuple[Embed, ui.View, int]:
-
+) -> tuple[None, None, None] | tuple[Embed, ui.View, int]:
     async with async_session as session:
         user: Union[User, None] = (await session.execute(
-            select(User).where(User.discord_user_id == str(interaction.user.id)))).scalars().one_or_none()
+            select(User).where(User.discord_user_id == str(interaction.user.id)))).scalar() # type: ignore
         if user is None:
             await interaction.edit_original_response(embed=Embed(
                 title="Acesso bloqueado!",
@@ -133,7 +134,7 @@ async def QuizCommand(
             if response.ok:
                 data: dict = await response.json()
                 embed = Embed(
-                    title=data.get("question", "").capitalize(),
+                    title=data.get("question", ""),
                     description="**Prêmio: ** :coin: %.2f coins **%iX**\n**Bilhete: ** :tickets: %.2f" % (
                         amount * env.QUIZ_MULTIPLIER,
                         env.QUIZ_MULTIPLIER,
@@ -149,7 +150,7 @@ async def QuizCommand(
                     status=1,
                     amount=amount,
                     theme=theme,
-                    question=data.get("question", "").capitalize(),
+                    question=data.get("question", ""),
                     alternatives=alternatives,
                     truth=data.get("truth", 99),
                     voice_url=data.get("voice_url", None)
@@ -170,13 +171,13 @@ async def QuizCommand(
                     status=1,
                     amount=amount,
                     theme=theme,
-                    question=data.get("question", "").capitalize(),
+                    question=data.get("question", ""),
                     alternatives=alternatives,
                     truth=data.get("truth", 99),
                     voice_url=data.get("voice_url", None)
                 )), ex=15)
                 await PlayAudioEffect(interaction, "quiz_started.wav")
-                return embed, ViewQuizButtons(quizzes.id), quizzes.id
+                return embed, ViewChoiceButtons(quizzes.id), quizzes.id
 
     await interaction.edit_original_response(
         embed=Embed(
@@ -192,7 +193,7 @@ async def QuizFinished(
     bets: List[Dict]
 ) -> None:
     async with async_session as session:
-        quiz: Union[Quizzes, None] = (await session.execute(select(Quizzes).where(Quizzes.id==quiz_id))).scalars().one_or_none()
+        quiz: Union[Quizzes, None] = (await session.execute(select(Quizzes).where(Quizzes.id==quiz_id))).scalar() # type: ignore
         if quiz is None:
             return
 

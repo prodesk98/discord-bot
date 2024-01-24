@@ -2,7 +2,7 @@ from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncAttrs, AsyncSession
 from sqlalchemy import (
     Column, Integer, String,
-    Boolean, Float, DateTime,
+    Float, DateTime,
     Sequence, func, JSON
 )
 from config import env

@@ -4,18 +4,22 @@ from aiohttp import ClientSession
 from databases import async_session, User
 from sqlalchemy import select
 
-from typing import Union
+from typing import Union, Tuple
 
 from config import env
 
 async def InstructCommand(
     interaction: Interaction,
     text: str
-) -> tuple[Embed, File]:
+) -> tuple[None, None] | tuple[Embed, File]:
     file = File("assets/gifs/knowledge.gif", filename="knowledge.gif")
 
     async with async_session as session:
-        user: Union[User, None] = (await session.execute(select(User).where(User.discord_user_id == str(interaction.user.id)))).scalars().one_or_none()
+        user: Union[User, None] = (await session.execute(
+            select(User)
+            .where(User.discord_user_id == str(interaction.user.id)) #type: ignore
+        )).scalar()
+
         if user is None:
             await interaction.edit_original_response(embed=Embed(
                 title="Acesso bloqueado!",
