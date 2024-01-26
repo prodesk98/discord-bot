@@ -22,7 +22,7 @@ def upgrade() -> None:
         "coins_history",
         sa.Column("id", sa.Integer, primary_key=True, autoincrement=True, nullable=False, unique=True),
         sa.Column("user_id", sa.Integer, sa.ForeignKey("users.id")),
-        sa.Column("amount", sa.Float),
+        sa.Column("amount", sa.Integer),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
 

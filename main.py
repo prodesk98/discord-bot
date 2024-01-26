@@ -9,11 +9,10 @@ from config import env
 from loguru import logger
 
 from commands import (
-    CoinsCommand,
+    MeCommand,
     InstructCommand,
     AskingCommand,
     QuizCommand,
-    QuizFinished,
     RankingCommand,
     BettingEventCommand
 )
@@ -48,9 +47,18 @@ class Bot(commands.Bot):
             return
         bet_opened = await aget("event:bet:opened")
         if bet_opened is not None:
-            result = findall(r"-?\d+\.?\d*", message.content)
-            if len(result) > 0:
-                await message.reply(content=f"Você apostou {result[0]} coins.")
+            if len(message.content) < 55 and (await aget(f"event:bet:{bet_opened.decode()}:{message.author.id}")) is not None:
+                if message.content == "cancel":
+                    await adel(f"event:bet:{bet_opened.decode()}:{message.author.id}")
+                    return
+
+                result = findall(r"-?\d+\.?\d*", message.content)
+                if len(result) > 0:
+                    bet = round(sum([float(r) for r in result]))
+                    await message.reply(content=f"Você apostou {bet} coins.")
+                    await adel(f"event:bet:{bet_opened.decode()}:{message.author.id}")
+                else:
+                    await message.reply(content="Não compreendi o montante que você planeja apostar. Caso deseje cancelar sua aposta, envie \"cancel\".")
 
 
 bot = Bot()
@@ -66,9 +74,9 @@ async def betting(interaction: Interaction, nome: str, capa: Attachment, a: str,
     valid_content_types = ["image/gif", "image/jpeg"]
     if capa.content_type not in valid_content_types:
         raise Exception("Formato inválido! Válidos: %s" % ", ".join([f for f in valid_content_types]))
+
     await interaction.response.defer(ephemeral=False)
-    embed, view, file, event_id = await BettingEventCommand(interaction, nome, capa, a, b)
-    await interaction.edit_original_response(embed=embed, view=view, attachments=[file])
+    await BettingEventCommand(interaction, nome, capa, a, b)
 
 @bot.tree.command(
     name="quiz",
@@ -83,20 +91,8 @@ async def quiz(interaction: Interaction, tema: str, premio: int):
     if not env.LEARN_BOT_ENABLED:
         raise Exception("API desativada")
 
-    theme_words_size = len(tema.split())
-    if theme_words_size < 3:
-        raise Exception("Tema muito pequeno, é necessário no mínimo 4 palavras.")
-    elif len(tema) > 65:
-        raise Exception("Tema excedeu o limite máximo de 65 caracteres.")
-
     await interaction.response.defer(ephemeral=False)
-
-    embed, view, quiz_id = await QuizCommand(interaction, tema, premio)
-    if embed is None:
-        return
-    await interaction.edit_original_response(embed=embed, view=view)
-
-    QuizManager(quiz_id, interaction).quizStatus.start()
+    await QuizCommand(interaction, tema, premio)
 
 @bot.tree.command(
     name="level",
@@ -113,11 +109,13 @@ async def level(interaction: Interaction):
 
 Exiba o ranking do canal executando o comando /ranking."""
 
-    embed = Embed(
-        title="Níveis e pontos de experiência".upper(),
-        description=description
+    await interaction.response.send_message(
+        embed=Embed(
+            title="Níveis e pontos de experiência".upper(),
+            description=description
+        ),
+        ephemeral=True
     )
-    await interaction.response.send_message(embed=embed, ephemeral=False)
 
 @bot.tree.command(
     name="ranking",
@@ -126,8 +124,7 @@ Exiba o ranking do canal executando o comando /ranking."""
 @app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id))
 async def ranking(interaction: Interaction):
     await interaction.response.defer(ephemeral=True)
-    embed = await RankingCommand(interaction)
-    await interaction.edit_original_response(embed=embed)
+    await RankingCommand(interaction)
 
 @bot.tree.command(
     name="asking",
@@ -141,11 +138,7 @@ async def asking(interaction: Interaction, pergunta: str):
         raise Exception("API desativada")
 
     await interaction.response.defer(ephemeral=False)
-
-    embed = await AskingCommand(interaction, pergunta)
-    if embed is None:
-        return
-    await interaction.edit_original_response(embed=embed)
+    await AskingCommand(interaction, pergunta)
 
 
 @bot.tree.command(
@@ -161,18 +154,8 @@ async def instruct(interaction: Interaction, texto: str):
     if not env.LEARN_BOT_ENABLED:
         raise Exception("API desativada")
 
-    text_size = len(texto)
-    if text_size < 65:
-        raise Exception("Texto muito pequeno, é necessário no mínimo 65 caracteres.")
-    elif text_size > 4000:
-        raise Exception("Texto excedeu o limite máximo de 4000 caracteres.")
-
     await interaction.response.defer(ephemeral=True)
-
-    embed, file = await InstructCommand(interaction, texto)
-    if embed is None:
-        return
-    await interaction.edit_original_response(embed=embed, content="", attachments=[file])
+    await InstructCommand(interaction, texto)
 
 
 @bot.tree.command(
@@ -184,12 +167,14 @@ async def ping(interaction: Interaction):
     if not has_bot_manager_permissions(interaction.user.roles):
         raise Exception("Você não tem permissão para executar esse comando.")
 
-    embed = Embed(
-        title="🏓 Pong!",
-        description=f"The bot latency is {round(interaction.client.latency * 1000)}ms.",
-        color=0x3836B5
+    await interaction.response.defer(ephemeral=True)
+    await interaction.edit_original_response(
+        embed=Embed(
+            title="🏓 Pong!",
+            description=f"The bot latency is {round(interaction.client.latency * 1000)}ms.",
+            color=0x3836B5
+        )
     )
-    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 @bot.tree.command(
@@ -199,18 +184,17 @@ async def ping(interaction: Interaction):
 @app_commands.checks.cooldown(2, 15, key=lambda i: (i.guild_id, i.user.id))
 async def me(interaction: Interaction):
     await interaction.response.defer(ephemeral=True)
-    embed, file = await CoinsCommand(interaction)
-    await interaction.edit_original_response(embed=embed, content="", attachments=[file])
+    await MeCommand(interaction)
 
 @ping.error
 @level.error
 @ranking.error
 @betting.error
-@me.error
 @instruct.error
 @asking.error
 @quiz.error
-async def on_error(interaction: Interaction, error: app_commands.AppCommandError):
+@me.error
+async def on_error(interaction: Interaction, error: Exception) -> None:
     if isinstance(error, app_commands.CommandOnCooldown):
         embed = Embed(
             title="⌛ Cooldown!",
@@ -220,13 +204,16 @@ async def on_error(interaction: Interaction, error: app_commands.AppCommandError
         await interaction.response.send_message(embed=embed, ephemeral=True)
         return
 
-    embed = Embed(
-        title="❌ Error!",
-        description=f"{error}",
-        color=0xE02B2B
+    logger.error(error)
+    await interaction.edit_original_response(
+        embed=Embed(
+            title="❌ Error!",
+            description=f"{error}",
+            color=0xE02B2B
+        )
     )
-    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
-bot.run(env.TOKEN)
+if __name__ == "__main__":
+    bot.run(env.TOKEN)
 

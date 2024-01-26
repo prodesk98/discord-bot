@@ -1,7 +1,6 @@
 import asyncio
-import json
+from orjson import dumps
 
-from redis.asyncio import Redis
 import redis.asyncio as aredis
 
 from typing import Union
@@ -21,5 +20,5 @@ async def adel(*names: str) -> None:
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(aset("test:cooldown:1", json.dumps({"tst": 1})))
+    loop.run_until_complete(aset("test:cooldown:1", dumps({"tst": 1})))
     print(loop.run_until_complete(aget("test:cooldown:1")))

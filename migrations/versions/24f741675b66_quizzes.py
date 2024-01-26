@@ -10,6 +10,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
+from models import QuizEnumStatus, QuizEnumChoices
 
 # revision identifiers, used by Alembic.
 revision: str = '24f741675b66'
@@ -22,12 +23,12 @@ def upgrade() -> None:
     op.create_table(
         "quizzes",
         sa.Column("id", sa.Integer, unique=True, autoincrement=True, primary_key=True),
-        sa.Column("status", sa.Integer, default=0),
-        sa.Column("amount", sa.Float, default=0),
+        sa.Column("status", sa.Enum(QuizEnumStatus), default=1),
+        sa.Column("amount", sa.Integer, default=0),
         sa.Column("theme", sa.String(100), nullable=False),
         sa.Column("question", sa.String(100), nullable=False),
         sa.Column("alternatives", sa.JSON),
-        sa.Column("truth", sa.Integer, default=-1, nullable=False),
+        sa.Column("truth", sa.Enum(QuizEnumChoices), default=1),
         sa.Column("voice_url", sa.String(256), nullable=True, default=None),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now())
     )

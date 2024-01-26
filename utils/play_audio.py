@@ -10,7 +10,7 @@ async def PlayAudioEffect(interaction: Interaction, audio: str) -> None:
     if interaction.user.voice is None:
         return
 
-    voice: VoiceState|VoiceClient = utils.get(
+    voice: VoiceState|VoiceClient = utils.get( # type: ignore
         interaction.client.voice_clients,
         guild=interaction.user.guild
     )

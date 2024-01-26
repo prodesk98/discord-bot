@@ -1,6 +1,6 @@
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from databases import Scores
+from database import Scores, AsyncDatabaseSession
+from utils import math
 
 LEVELS = {
     0: "coin",
@@ -24,8 +24,8 @@ LVL_NUMBER = {
 }
 
 
-async def registerScore(async_session: AsyncSession, user_id: int, amount: int) -> None:
-    async with async_session as session:
+async def registerScore(user_id: int, amount: int) -> None:
+    async with AsyncDatabaseSession as session:
         session.add(
             Scores(
                 user_id=user_id,
@@ -34,20 +34,24 @@ async def registerScore(async_session: AsyncSession, user_id: int, amount: int) 
         )
         await session.commit()
 
-async def getStickerByIdUser(async_session, user_id: int) -> str:
-    async with async_session as session:
+async def getStickerByIdUser(user_id: int) -> str:
+    async with AsyncDatabaseSession as session:
         score = (
             await session.execute(
                 select(func.sum(Scores.amount)).where(
-                    Scores.user_id == user_id
+                    Scores.user_id == user_id # type: ignore
                 )
             )
         ).scalar()
-        score = 0 if score is None else score
+        score = math.normalize_value(score)
         return LevelSticker(scoreToLevel(score))
 
 def hasLevelPermissions(score: int, minimo: int = 1) -> bool:
     return LevelNumber(scoreToLevel(score)) >= minimo
+
+
+def scoreToSticker(score: int) -> str:
+    return LevelSticker(scoreToLevel(score))
 
 def scoreToLevel(score: int) -> str:
     if score <= 50:

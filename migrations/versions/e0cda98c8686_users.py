@@ -22,6 +22,7 @@ def upgrade() -> None:
         "users",
         sa.Column("id", sa.Integer, primary_key=True, autoincrement=True, nullable=False, unique=True),
         sa.Column("discord_user_id", sa.VARCHAR(32), unique=True, nullable=False),
+        sa.Column("discord_guild_id", sa.VARCHAR(32), nullable=True),
         sa.Column("discord_username", sa.VARCHAR(50), unique=True, nullable=False),
         sa.Column("discord_nick", sa.VARCHAR(50), unique=True, nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),

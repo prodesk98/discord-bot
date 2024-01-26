@@ -11,7 +11,7 @@ class Settings(BaseModel):
     POSTGRES_PASSWORD: Optional[str] = getenv("POSTGRES_PASSWORD")
     POSTGRES_DSN: Optional[PostgresDsn] = getenv("POSTGRES_DSN")
     REDIS_DSN: Optional[RedisDsn] = getenv("REDIS_DSN")
-    HOURLY_EARNINGS: Optional[float] = float(getenv("HOURLY_EARNINGS", 20.0))
+    HOURLY_EARNINGS: Optional[int] = int(getenv("HOURLY_EARNINGS", 20))
     BOT_MANAGE_ROLE: Optional[str] = getenv("BOT_MANAGE_ROLE", "bot_manager")
     LEARN_BOT_ENDPOINT: Optional[str] = getenv("LEARN_BOT_ENDPOINT")
     LEARN_BOT_AUTHORIZATION: Optional[str] = getenv("LEARN_BOT_AUTHORIZATION")

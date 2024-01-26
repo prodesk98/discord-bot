@@ -10,6 +10,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
+from models import BettingEnumStatus
 
 # revision identifiers, used by Alembic.
 revision: str = '056fa30634e8'
@@ -24,7 +25,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer, unique=True, autoincrement=True, primary_key=True),
         sa.Column("winner_choice_id", sa.Integer, nullable=True, default=None),
         sa.Column("name", sa.String(255)),
-        sa.Column("status", sa.Integer, default=1),
+        sa.Column("status", sa.Enum(BettingEnumStatus), default=1),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now())
     )
 

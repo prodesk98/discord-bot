@@ -1,32 +1,29 @@
 from discord import Interaction, Embed, File
 from aiohttp import ClientSession
 
-from databases import async_session, User
+from database import AsyncDatabaseSession, User
 from sqlalchemy import select
 
-from typing import Union, Tuple
-
 from config import env
+from utils import has_account
+
 
 async def InstructCommand(
     interaction: Interaction,
     text: str
-) -> tuple[None, None] | tuple[Embed, File]:
-    file = File("assets/gifs/knowledge.gif", filename="knowledge.gif")
-
-    async with async_session as session:
-        user: Union[User, None] = (await session.execute(
-            select(User)
-            .where(User.discord_user_id == str(interaction.user.id)) #type: ignore
-        )).scalar()
-
-        if user is None:
-            await interaction.edit_original_response(embed=Embed(
+) -> None:
+    if not (await has_account(interaction.user.id)):
+        await interaction.edit_original_response(
+            embed=Embed(
                 title="Acesso bloqueado!",
                 description="Você precisa ter uma conta para executar esse comando.\n\nExecute /me",
                 color=0xE02B2B
-            ))
-            return None, None
+            )
+        )
+        return
+
+    async with AsyncDatabaseSession as session:
+        user: User = (await session.execute(select(User).where(User.id == interaction.user.id))).scalar() # type: ignore
 
     async with ClientSession() as session:
         async with session.post(f"{env.LEARN_BOT_ENDPOINT}/upsert", headers={
@@ -41,6 +38,7 @@ async def InstructCommand(
                     description="Agora o robô está em processo de aprendizagem a partir dessas informações...\n\n✅ Nenhuma ação adicional será necessária.\n⏰ Disponível em alguns minutos.\n",
                     color=0xDBF5Fe
                 )
+                file = File("assets/gifs/knowledge.gif", filename="knowledge.gif")
                 embed.set_image(url="attachment://knowledge.gif")
                 return embed, file
 

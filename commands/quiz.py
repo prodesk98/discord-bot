@@ -1,239 +1,76 @@
-from discord import Embed, Interaction, ui, ButtonStyle
-from typing import List, Dict
-
+from discord import Embed, Interaction
 from aiohttp import ClientSession
-from databases import async_session, User, Quizzes
-
-from sqlalchemy import select
-from typing import Union
-
+from database import Quizzes
 from cache import aget, aset
-from orjson import dumps, loads
+from orjson import loads, dumps
 
-from utils import registerQuizzesHistory, registerCoinHistory, registerScore, PlayAudioEffect, getStickerByIdUser
+from manager import QuizManager
+from utils import (
+    registerQuizzesHistory,
+    PlayAudioEffect, has_account, get_user_by_discord_user_id
+)
 from config import env
-
-from random import randint
-
-
-ALTERNATIVES_LABEL = {
-    "A": 1,
-    "B": 2,
-    "C": 3,
-    "D": 4
-}
-
-ALTERNATIVES_NUMBER = {
-    1: "A",
-    2: "B",
-    3: "C",
-    4: "D"
-}
+from models import Quiz, QuizEnumStatus, ALTERNATIVES
+from views import QuizChoicesButtons
 
 
-class ViewChoiceButtons(ui.View):
-    def __init__(self, quiz_id: int):
-        super().__init__(timeout=None)
-        self.quiz_id = quiz_id
+async def create(data: Quiz, theme: str, amount: int, interaction: Interaction) -> None:
+    embed = Embed(
+        title=data.question,
+        description="**Prêmio: ** :coin: %.2f coins **%iX**\n**Bilhete: ** :tickets: %.2f" % (
+            amount * env.QUIZ_MULTIPLIER,
+            env.QUIZ_MULTIPLIER,
+            amount
+        ),
+        color=0x147BBD
+    )
 
-    @ui.button(label="A", style=ButtonStyle.primary, custom_id="A")
-    async def A(self, interaction: Interaction, button: ui.Button):
-        await self.bet(interaction, button)
+    for q, alternative in enumerate(data.alternatives):
+        embed.add_field(name=f"{ALTERNATIVES.get(q + 1, None)}) {alternative}"[:256], value="", inline=False)
+    embed.set_footer(text="Encerra em 15 segundos...")
 
-    @ui.button(label="B", style=ButtonStyle.primary, custom_id="B")
-    async def B(self, interaction: Interaction, button: ui.Button):
-        await self.bet(interaction, button)
+    metadata = dict(
+        status=QuizEnumStatus.opened,
+        amount=amount,
+        theme=theme,
+        question=data.question,
+        alternatives=data.alternatives,
+        truth=data.truth,
+        voice_url=data.voice_url
+    )
+    quizzes = Quizzes(**metadata)
 
-    @ui.button(label="C", style=ButtonStyle.primary, custom_id="C")
-    async def C(self, interaction: Interaction, button: ui.Button):
-        await self.bet(interaction, button)
+    user = await get_user_by_discord_user_id(interaction.user.id)
 
-    @ui.button(label="D", style=ButtonStyle.primary, custom_id="D")
-    async def D(self, interaction: Interaction, button: ui.Button):
-        await self.bet(interaction, button)
+    await registerQuizzesHistory(quizzes)
+    await aset(f"quiz:opened:{user.discord_guild_id}", str(quizzes.id).encode(), ex=17)
+    await aset(f"quiz:payload:{user.discord_guild_id}:{quizzes.id}", dumps(metadata), ex=15)
+    await PlayAudioEffect(interaction, "quiz_started.wav")
 
-    async def bet(self, interaction: Interaction, button: ui.Button):
-        choice = int(ALTERNATIVES_LABEL.get(button.custom_id, -1))
-        print(f"[QUIZ BUTTON EVENT] {interaction.user.nick} chose {button.custom_id}")
-        quiz_cache = await aget("quiz:opened")
-        if quiz_cache is None:
-            await interaction.response.send_message(embed=Embed( # type: ignore
-                title="Quiz fechado!",
-                description="Você não pode participar de um quiz que já foi finalizado.",
-                color=0xE02B2B
-            ), ephemeral=True)
-            return
-
-        async with async_session as session:
-            user: Union[User, None] = (await session.execute(
-                select(User).where(User.discord_user_id == str(interaction.user.id)))).scalar() # type: ignore
-            if user is None:
-                await interaction.response.send_message(embed=Embed( # type: ignore
-                    title="Acesso bloqueado!",
-                    description="Você precisa ter uma conta para executar esse comando.\n\nExecute /me",
-                    color=0xE02B2B
-                ), ephemeral=True)
-                return
-
-        bet = await aget(f"quiz:{self.quiz_id}:bet:{user.discord_user_id}")
-        if bet is not None:
-            await interaction.response.send_message(embed=Embed( # type: ignore
-                title="Você não tem permissão!",
-                description="Você já escolheu uma alternativa.",
-                color=0xE02B2B
-            ), ephemeral=True)
-            return
-
-        data: dict = loads(quiz_cache)
-        data.get("bets", []).append(
-            {
-                "discord_id": user.discord_user_id,
-                "id": user.discord_user_id,
-                "user_id": user.id,
-                "choice": choice
-            }
-        )
-        await aset("quiz:opened", dumps(data), ex=30)
-        await aset(f"quiz:{self.quiz_id}:bet:{user.discord_user_id}", dumps({"bet": 1}), ex=60)
-        await interaction.response.send_message(f"Você escolheu a alternativa **{ALTERNATIVES_NUMBER[choice]}**.", ephemeral=True) # type: ignore
-
+    QuizManager(interaction=interaction, buttons=QuizChoicesButtons(quizzes.id, user.discord_guild_id)).quizStatus.start()
 
 
 async def QuizCommand(
     interaction: Interaction,
     theme: str,
     amount: int
-) -> tuple[None, None, None] | tuple[Embed, ui.View, int]:
-    async with async_session as session:
-        user: Union[User, None] = (await session.execute(
-            select(User).where(User.discord_user_id == str(interaction.user.id)))).scalar() # type: ignore
-        if user is None:
-            await interaction.edit_original_response(embed=Embed(
-                title="Acesso bloqueado!",
-                description="Você precisa ter uma conta para executar esse comando.\n\nExecute /me",
-                color=0xE02B2B
-            ))
-            return None, None, None
+) -> None:
+    if not (await has_account(interaction.user.id)):
+        raise Exception("Você precisa ter uma conta para executar esse comando.\n\nExecute /me")
 
-    quiz_opened = await aget("quiz:opened")
-    if quiz_opened is not None:
-        await interaction.edit_original_response(embed=Embed(
-            title="Não permitido!",
-            description="Aguarde o encerramento do último quiz para abrir um novo.",
-            color=0xE02B2B
-        ))
-        return None, None, None
+    has_quiz_opened = await aget(f"quiz:opened:{interaction.guild_id}")
+    if has_quiz_opened is not None:
+        raise Exception("Aguarde o encerramento do último quiz para abrir um novo.")
 
     async with ClientSession() as session:
-        async with session.post(f"{env.LEARN_BOT_ENDPOINT}/million-show", headers={
+        async with session.post(f"{env.LEARN_BOT_ENDPOINT}/questionnaire", headers={
             "Authorization": f"Bearer {env.LEARN_BOT_AUTHORIZATION}"
         }, json={
           "theme": theme,
           "amount": amount
         }) as response:
             if response.ok:
-                data: dict = await response.json()
-                embed = Embed(
-                    title=data.get("question", ""),
-                    description="**Prêmio: ** :coin: %.2f coins **%iX**\n**Bilhete: ** :tickets: %.2f" % (
-                        amount * env.QUIZ_MULTIPLIER,
-                        env.QUIZ_MULTIPLIER,
-                        amount
-                    ),
-                    color=0x147BBD
-                )
-                alternatives = data.get("alternatives", [])
-                for q, alternative in enumerate(alternatives):
-                    embed.add_field(name=f"{ALTERNATIVES_NUMBER.get(q)}) {alternative}"[:256], value="", inline=False)
-                embed.set_footer(text="Encerra em 15 segundos...")
-                quizzes = Quizzes(
-                    status=1,
-                    amount=amount,
-                    theme=theme,
-                    question=data.get("question", ""),
-                    alternatives=alternatives,
-                    truth=data.get("truth", 99),
-                    voice_url=data.get("voice_url", None)
-                )
-                await registerQuizzesHistory(
-                    async_session,
-                    quizzes
-                )
-                await aset("quiz:opened", dumps(
-                    {
-                        "id": quizzes.id,
-                        "amount": quizzes.amount,
-                        "truth": quizzes.truth,
-                        "bets": []
-                    }
-                ), ex=30)
-                await aset(f"quiz:open_bets:{quizzes.id}", dumps(dict(
-                    status=1,
-                    amount=amount,
-                    theme=theme,
-                    question=data.get("question", ""),
-                    alternatives=alternatives,
-                    truth=data.get("truth", 99),
-                    voice_url=data.get("voice_url", None)
-                )), ex=15)
-                await PlayAudioEffect(interaction, "quiz_started.wav")
-                return embed, ViewChoiceButtons(quizzes.id), quizzes.id
-
-    await interaction.edit_original_response(
-        embed=Embed(
-            title="Error!",
-            description=f"Houve um erro com a resposta. Por favor, verifique a API de respostas: {env.LEARN_BOT_ENDPOINT}",
-            color=0xE02B2B
-        )
-    )
-
-async def QuizFinished(
-    interaction: Interaction,
-    quiz_id: int,
-    bets: List[Dict]
-) -> None:
-    async with async_session as session:
-        quiz: Union[Quizzes, None] = (await session.execute(select(Quizzes).where(Quizzes.id==quiz_id))).scalar() # type: ignore
-        if quiz is None:
-            return
-
-    total_prize = round(quiz.amount * env.QUIZ_MULTIPLIER, 2)
-    alternatives_string = '\n'.join(['%s) %s' % (ALTERNATIVES_NUMBER[q+1], al) for q, al in enumerate(quiz.alternatives)])
-    embed = Embed(
-        title=quiz.question,
-        description=f"{alternatives_string}"
-                    f"\n\nPrêmio: :coin: {total_prize} coins\n"
-                    f"Resposta correta: **({ALTERNATIVES_NUMBER.get(quiz.truth)})** "
-                    f"{quiz.alternatives[quiz.truth - 1]}\n\n",
-        color=0x3A8B63
-    )
-
-    awarded = ''
-    losers = ''
-    for bet in bets:
-        discord_id = bet.get("discord_id", "")
-        user_id = bet.get("user_id", 0)
-        choice = bet.get("choice", -1)
-        if 0 < choice == quiz.truth:
-            score = randint(10, 20)
-            awarded += f'\n{await getStickerByIdUser(async_session, user_id)} <@{discord_id}> +{score}xp:zap:'
-            await registerCoinHistory(
-                async_session,
-                user_id=user_id,
-                amount=total_prize
-            )
-            await registerScore(
-                async_session,
-                user_id=user_id,
-                amount=score
-            )
-        else:
-            losers += (f'\n({ALTERNATIVES_NUMBER[choice] if choice > 0 else "(-)"})'
-                       f'{await getStickerByIdUser(async_session, user_id)} <@{discord_id}>')
-
-    embed.add_field(name=":trophy: Acertos", value=awarded, inline=True)
-    embed.add_field(name=":x: Erros", value=losers, inline=True)
-    embed.remove_footer()
-    await interaction.delete_original_response()
-    await interaction.channel.send(embed=embed)
-    await PlayAudioEffect(interaction, "quiz_finished.wav")
+                data: Quiz = Quiz(**loads(await response.content.read()))
+                await create(data, theme, amount, interaction)
+            else:
+                raise Exception(f"Houve um erro com a resposta. Por favor, verifique a API de respostas: http(s)//<END_POINT>/questionnaire")

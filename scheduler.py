@@ -3,14 +3,14 @@ import os
 from datetime import datetime, timedelta
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from databases import async_session, Scores
+from database import AsyncDatabaseSession, Scores
 from sqlalchemy import delete
 
 
 async def remove_score():
-    async with async_session as session:
+    async with AsyncDatabaseSession as session:
         await session.execute(
-            delete(Scores).where(Scores.created_at <= datetime.now() - timedelta(days=15))
+            delete(Scores).where(Scores.created_at <= datetime.now() - timedelta(days=15)) # type: ignore
         )
         await session.commit()
 

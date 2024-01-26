@@ -40,15 +40,19 @@ class ViewBetButtons(ui.View):
         await interaction.response.send_message(f"Quantos coins você deseja apostar no **{self.b}**?", ephemeral=True)  # type: ignore
 
 
-async def BettingEventCommand(interaction: Interaction, name: str, banner: Attachment, a: str, b: str) -> tuple[Embed, View, File, int]:
+async def BettingEventCommand(interaction: Interaction, name: str, banner: Attachment, a: str, b: str) -> None:
     description = f"""
 **1º** {a.capitalize()} *#odd*(**x2.5**)
 **2º** {b.capitalize()} *#odd*(**x3.5**)"""
 
-    boxing_gloves = File(f"assets/gifs/boxing_gloves.gif", filename=f"boxing_gloves.gif")
+    clock = File(f"assets/gifs/clock.gif", filename=f"clock.gif")
     embed = Embed(title=f"[#123] {name.upper()}", description=description, color=0xD30B0B)
     embed.set_image(url=banner.url)
-    embed.set_footer(text=f"Status do Evento: {STATUS.get(1)}", icon_url="attachment://boxing_gloves.gif")
+    embed.set_footer(text=f"Status do Evento: {STATUS.get(1)}", icon_url="attachment://clock.gif")
     await PlayAudioEffect(interaction, "boxing_bell.wav")
     await aset(f"event:bet:opened", f"{123}".encode(), ex=60)
-    return embed, ViewBetButtons(123, a, b), boxing_gloves, 1
+    await interaction.edit_original_response(
+        embed=embed,
+        view=ViewBetButtons(123, a, b),
+        attachments=[clock]
+    )
