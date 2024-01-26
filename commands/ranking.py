@@ -27,7 +27,7 @@ async def RankingCommand(interaction: Interaction) -> None:
         title="TOP 10 RANKING",
         description=""
     )
-    image = File(fp="assets/gifs/fire.gif", filename="fire.gif")
+    image = File(fp="assets/gifs/settings/fire.gif", filename="fire.gif")
     embed.set_image(url="attachment://fire.gif")
     embed.add_field(name="Usuário", value="\n".join(usernames), inline=True)
     embed.add_field(name="Experiência", value="\n".join(scores), inline=True)

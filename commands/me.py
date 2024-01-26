@@ -81,7 +81,7 @@ async def MeCommand(
             await session.commit()
 
     lvl = scoreToLevel(score)
-    file = File(f"assets/gifs/{lvl}.gif", filename=f"{lvl}.gif")
+    file = File(f"assets/gifs/levels/{lvl}.gif", filename=f"{lvl}.gif")
 
     if not is_member:
         coins_welcome = 100

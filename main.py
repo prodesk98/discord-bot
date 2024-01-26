@@ -95,7 +95,7 @@ async def quiz(interaction: Interaction, tema: str, premio: int):
     await QuizCommand(interaction, tema, premio)
 
 @bot.tree.command(
-    name="level",
+    name="levels",
     description="Informações sobre xp e níveis"
 )
 @app_commands.checks.cooldown(1, 10.0, key=lambda i: (i.guild_id, i.user.id))

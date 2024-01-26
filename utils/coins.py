@@ -17,7 +17,7 @@ async def hasCoinsAvailable(user_id: int, amount: int) -> bool:
     async with AsyncDatabaseSession as session:
         balance = (await session.execute(
             select(func.sum(CoinsHistory.amount)).where(
-                User.id == user_id # type: ignore
+                CoinsHistory.user_id == user_id # type: ignore
             )
         )).scalar()
         await session.close()

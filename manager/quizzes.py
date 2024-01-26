@@ -1,15 +1,16 @@
 from random import randint
+from typing import List
 
 from discord.ext import commands, tasks
 from discord import Interaction, Embed, File
 from orjson import loads
 from cache import aget
 from config import env
-from database import User, QuizBet
-from models import ALTERNATIVES, get_alternative_by_name, Quiz
+from database import User, QuizBet, AsyncDatabaseSession, CoinsHistory, Scores
+from models import ALTERNATIVES, get_alternative_by_name, Quiz, QuizEnumStatus
 from utils import (
     PlayAudioEffect, getStickerByIdUser, get_quiz_all_bet,
-    registerCoinHistory, registerScore, get_quiz_by_id
+    get_quiz_by_id
 )
 from views import QuizChoicesButtons
 
@@ -38,24 +39,34 @@ async def QuizFinished(
     awarded = ''
     losers = ''
     result: tuple[QuizBet, User]
-    for result in results:
-        bet, user = result
-        user_id = bet.user_id
-        choice = bet.choice
-        if choice == quiz.truth:
-            score = randint(10, 20)
-            awarded += f'\n{await getStickerByIdUser(user_id)} <@{user.discord_user_id}> +{score}xp:zap:'
-            await registerCoinHistory(
-                user_id=user_id,
-                amount=total_prize
-            )
-            await registerScore(
-                user_id=user_id,
-                amount=score
-            )
-        else:
-            losers += (f'\n({ALTERNATIVES.get(bet.choice.value)})'
-                       f'{await getStickerByIdUser(user_id)} <@{user.discord_user_id}>')
+    objects: List[CoinsHistory|Scores] = []
+    async with AsyncDatabaseSession as session:
+        for result in results:
+            bet, user = result
+            user_id = bet.user_id
+            choice = bet.choice
+            if choice == quiz.truth:
+                score = randint(10, 20)
+                awarded += f'\n{await getStickerByIdUser(user_id)} <@{user.discord_user_id}> +{score}xp:zap:'
+                objects.extend(
+                    [
+                        CoinsHistory(
+                            user_id=user_id,
+                            amount=total_prize,
+                        ),
+                        Scores(
+                            user_id=user_id,
+                            amount=score,
+                        )
+                    ]
+                )
+            else:
+                losers += (f'\n({ALTERNATIVES.get(bet.choice.value)})'
+                           f'{await getStickerByIdUser(user_id)} <@{user.discord_user_id}>')
+
+        quiz.status = QuizEnumStatus.closed
+        session.add_all(objects)
+        await session.commit()
 
     embed.add_field(name=":trophy: Acertos", value=awarded, inline=True)
     embed.add_field(name=":x: Erros", value=losers, inline=True)
@@ -95,7 +106,7 @@ class QuizManager(commands.Cog):
                 ),
                 color=0x147BBD
             )
-            clock = File(f"assets/gifs/clock.gif", filename=f"clock.gif")
+            clock = File(f"assets/gifs/settings/clock.gif", filename=f"clock.gif")
             quiz_finished_embed.set_footer(text=f"Calculando...", icon_url="attachment://clock.gif")
             quiz_finished_embed.clear_fields()
             await self.interaction.edit_original_response(embed=quiz_finished_embed, attachments=[clock])

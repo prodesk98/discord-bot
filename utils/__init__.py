@@ -9,7 +9,7 @@ from .quizzes import (
 from .score import (
     registerScore, scoreToLevel, LevelSticker,
     LevelNumber,hasLevelPermissions, getStickerByIdUser,
-    scoreToSticker
+    scoreToSticker, get_score_by_user_id
 )
 from .math import normalize_value
 from .users import get_user_by_discord_user_id

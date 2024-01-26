@@ -1,15 +1,20 @@
 from discord import ui, ButtonStyle, Interaction, Embed
+from loguru import logger
 
 from cache import aget, aset
 from models import get_alternative_by_name, ALTERNATIVES, QuizEnumChoices
-from utils import has_account, has_quiz_bet, bet_quiz, get_user_by_discord_user_id
+from utils import (
+    has_account, has_quiz_bet, bet_quiz,
+    get_user_by_discord_user_id, hasCoinsAvailable, registerCoinHistory
+)
 
 
 class QuizChoicesButtons(ui.View):
-    def __init__(self, quiz_id: int, guild_id: str):
+    def __init__(self, quiz_id: int, guild_id: str, amount: int):
         super().__init__(timeout=None)
         self.quiz_id = quiz_id
         self.guild_id = guild_id
+        self.amount = amount
 
     @ui.button(label="A", style=ButtonStyle.primary, custom_id="A")
     async def A(self, interaction: Interaction, button: ui.Button):
@@ -40,7 +45,7 @@ class QuizChoicesButtons(ui.View):
 
         user = await get_user_by_discord_user_id(interaction.user.id)
 
-        print(f"[QUIZ BUTTON EVENT] {interaction.user.nick} chose {button.custom_id}")
+        logger.info(f"[QUIZ BUTTON EVENT] {user.discord_nick} chose {button.custom_id}")
         has_quiz_opened = await aget(f"quiz:opened:{interaction.guild_id}")
         if has_quiz_opened is None:
             await interaction.response.send_message( # type: ignore
@@ -68,13 +73,26 @@ class QuizChoicesButtons(ui.View):
             )
             return
 
+        if not (await hasCoinsAvailable(user.id, self.amount)):
+            await interaction.response.send_message(  # type: ignore
+                embed=Embed(
+                    title="Para aí!",
+                    description="Você não têm money para pagar o bilhete.",
+                    color=0xE02B2B
+                ),
+                ephemeral=True
+            )
+            return
+
         choice = get_alternative_by_name(button.custom_id)
         await bet_quiz(
             user_id=user.id,
             quiz_id=self.quiz_id,
             guild_id=self.guild_id,
-            choice=QuizEnumChoices(choice)
+            choice=QuizEnumChoices(choice),
+            amount=self.amount
         )
         await aset(f"quiz:{self.quiz_id}:betting:{user.id}", str(choice).encode(), ex=35)
+        await registerCoinHistory(user.id, self.amount * -1)
         await interaction.response.send_message(f"Você escolheu a alternativa **{ALTERNATIVES.get(choice, None)}**.", ephemeral=True) # type: ignore
 

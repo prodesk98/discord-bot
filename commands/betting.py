@@ -45,7 +45,7 @@ async def BettingEventCommand(interaction: Interaction, name: str, banner: Attac
 **1º** {a.capitalize()} *#odd*(**x2.5**)
 **2º** {b.capitalize()} *#odd*(**x3.5**)"""
 
-    clock = File(f"assets/gifs/clock.gif", filename=f"clock.gif")
+    clock = File(f"assets/gifs/settings/clock.gif", filename=f"clock.gif")
     embed = Embed(title=f"[#123] {name.upper()}", description=description, color=0xD30B0B)
     embed.set_image(url=banner.url)
     embed.set_footer(text=f"Status do Evento: {STATUS.get(1)}", icon_url="attachment://clock.gif")

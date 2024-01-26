@@ -23,6 +23,17 @@ LVL_NUMBER = {
     "king": 4
 }
 
+async def get_score_by_user_id(user_id: int) -> int:
+    async with AsyncDatabaseSession as session:
+        score = (
+            await session.execute(
+                select(func.sum(Scores.amount)).where(
+                    Scores.user_id == user_id  # type: ignore
+                )
+            )
+        ).scalar()
+        return math.normalize_value(score)
+
 
 async def registerScore(user_id: int, amount: int) -> None:
     async with AsyncDatabaseSession as session:
