@@ -23,13 +23,15 @@ async def AskingCommand(
     pet = await get_pet(user.id)
 
     if pet is None:
-        raise Exception("Você precisa ter um pet para executar esse comando."
-                        "Por favor, execute /pet ou /pets para mais informações...")
+        raise Exception("Você precisa ter um pet para executar esse comando.\n\n"
+                        "Por favor, execute /pet\n\n"
+                        "Ou /pets para mais informações...")
 
     score = await  get_score_by_user_id(user.id)
 
     if not hasLevelPermissions(score, 2):
-        raise Exception("Você precisa ter no mínimo 2 Níveis para executar esse comando.\n\nExecute /me - para ver o seu nível\nExecute /levels - para mais informações...")
+        raise Exception("Você precisa ter no mínimo 2 Níveis para executar esse comando.\n\n"
+                        "Execute /me - para ver o seu nível\nExecute /levels - para mais informações...")
 
     asking_cost = env.ASKING_COST
     if not (await hasCoinsAvailable(user.id, asking_cost)):

@@ -3,5 +3,4 @@ from .instruct import InstructCommand
 from .asking import AskingCommand
 from .quiz import QuizCommand
 from .ranking import RankingCommand
-from .betting import BettingEventCommand
 from .pet import PetCommand

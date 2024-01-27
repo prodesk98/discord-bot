@@ -1,6 +1,5 @@
 from .schemas import (
     User, CoinsHistory, Quizzes,
-    Scores, QuizBet, BettingEvents,
-    Pet
+    Scores, QuizBet, Pet
 )
 from .session import AsyncDatabaseSession

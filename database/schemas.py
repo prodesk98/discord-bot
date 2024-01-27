@@ -1,7 +1,5 @@
-from models import (
-    BettingEnumChoices, QuizEnumChoices, BettingEnumStatus,
-    QuizEnumStatus
-)
+from models import QuizEnumChoices, QuizEnumStatus
+
 
 from sqlalchemy import (
     Column, Integer, String, DateTime,
@@ -53,16 +51,6 @@ class QuizBet(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     amount = Column(Integer)
     choice = Column(Enum(QuizEnumChoices))
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-class BettingEvents(Base):
-    __tablename__ = "betting_events"
-
-    id = Column(Integer, Sequence("betting_events_id_seq"), primary_key=True)
-    winner_choice_id = Column(Integer, default=None, nullable=True)
-    name = Column(String(255))
-    status = Column(Enum(BettingEnumStatus))
-    choice = Column(Enum(BettingEnumChoices))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class Scores(Base):
