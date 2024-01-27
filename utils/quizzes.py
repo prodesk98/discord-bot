@@ -46,6 +46,14 @@ async def get_quiz_all_bet(quiz_id: int) -> List[QuizBet|User]:
             .where(QuizBet.quiz_id == quiz_id) # type: ignore
         )).fetchall()
 
+async def count_quiz_erros(quiz_id: int, truth: QuizEnumChoices) -> int:
+    async with AsyncDatabaseSession as session:
+        return normalize_value(
+            (await session.execute(
+                select(func.count(QuizBet.id).label("count")).where(QuizBet.choice != truth).where(QuizBet.quiz_id == quiz_id) # type: ignore
+            )).scalar()
+        )
+
 async def get_quiz_by_id(quiz_id: int) -> Quizzes|None:
     async with AsyncDatabaseSession as session:
         result: Quizzes|None = (await session.execute(select(Quizzes).where(Quizzes.id==quiz_id))).scalar_one_or_none() # type: ignore
@@ -88,3 +96,6 @@ async def register_count_current_time() -> None:
         value=str(count).encode(),
         ex=3600*7
     )
+
+def calc_bonus(total: int, value_erros: int, total_erros) -> int:
+    return total + (value_erros * total_erros)

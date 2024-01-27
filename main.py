@@ -5,7 +5,7 @@ from discord import (
     app_commands, File, Attachment, Message
 )
 
-from config import env
+from config import env, pets
 from loguru import logger
 
 from commands import (
@@ -14,7 +14,8 @@ from commands import (
     AskingCommand,
     QuizCommand,
     RankingCommand,
-    BettingEventCommand
+    BettingEventCommand,
+    PetCommand
 )
 from utils import has_bot_manager_permissions
 from cache import aget, adel
@@ -98,7 +99,7 @@ async def quiz(interaction: Interaction, tema: str, premio: int):
     name="levels",
     description="Informações sobre xp e níveis"
 )
-@app_commands.checks.cooldown(1, 10.0, key=lambda i: (i.guild_id, i.user.id))
+@app_commands.checks.cooldown(1, 300.0, key=lambda i: (i.guild_id, i.user.id))
 async def level(interaction: Interaction):
     description = """:egg: (Egg) **1º Nível** - 0xp até 50xp
 :crossed_swords: (Warrior) **2º Nível** - 51xp até 500xp
@@ -118,6 +119,43 @@ Exiba o ranking do canal executando o comando /ranking."""
     )
 
 @bot.tree.command(
+    name="pet",
+    description="Meu pet"
+)
+@app_commands.checks.cooldown(1, 1.0, key=lambda i: (i.guild_id, i.user.id))
+async def pet(interaction: Interaction):
+    await interaction.response.defer(ephemeral=True)
+    await PetCommand(interaction)
+
+@bot.tree.command(
+    name="pets",
+    description="Informações sobre pets"
+)
+@app_commands.checks.cooldown(1, 300.0, key=lambda i: (i.guild_id, i.user.id))
+async def pets_informations(interaction: Interaction):
+    informations = """**{name}**
+{description}
+**Probabilidade**: {proba}%"""
+
+    await interaction.response.defer(ephemeral=True)
+    embeds = []
+    files = []
+    for i, pet in enumerate(pets):
+        embeds.append(
+            Embed(
+            description=informations.format(
+                    name=pet.name,
+                    description=pet.description,
+                    proba=pet.proba * 100,
+                )
+            )
+        )
+        embeds[i].set_thumbnail(url=f"attachment://{pet.thumbnail}")
+        files.append(File(fp=f"assets/gifs/pets/{pet.thumbnail}", filename=pet.thumbnail))
+    await interaction.edit_original_response(embeds=embeds, attachments=files)
+
+
+@bot.tree.command(
     name="ranking",
     description="Exiba o ranking do canal"
 )
@@ -130,7 +168,7 @@ async def ranking(interaction: Interaction):
     name="asking",
     description="Perguntar ao robô"
 )
-@app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id))
+@app_commands.checks.cooldown(1, 60.0, key=lambda i: (i.guild_id, i.user.id))
 async def asking(interaction: Interaction, pergunta: str):
     if env.LEARN_BOT_ENDPOINT is None or env.LEARN_BOT_AUTHORIZATION is None:
         raise Exception("API não foi configurado corretamente.")
@@ -188,6 +226,8 @@ async def me(interaction: Interaction):
 
 @ping.error
 @level.error
+@pets_informations.error
+@pet.error
 @ranking.error
 @betting.error
 @instruct.error

@@ -71,3 +71,16 @@ class Scores(Base):
     amount = Column(Integer)
     user_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class Pet(Base):
+    __tablename__ = "pets"
+
+    id = Column(Integer, Sequence("pets_id_seq"), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    config_pet_id = Column(Integer)
+    name = Column(String(155))
+    personality = Column(String(350))
+    swear_words = Column(JSON)
+    informal_greeting = Column(JSON)
+    level = Column(Integer)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -10,7 +10,7 @@ from database import User, QuizBet, AsyncDatabaseSession, CoinsHistory, Scores
 from models import ALTERNATIVES, get_alternative_by_name, Quiz, QuizEnumStatus
 from utils import (
     PlayAudioEffect, getStickerByIdUser, get_quiz_all_bet,
-    get_quiz_by_id
+    get_quiz_by_id, count_quiz_erros, calc_bonus
 )
 from views import QuizChoicesButtons
 
@@ -22,7 +22,9 @@ async def QuizFinished(
     if quiz is None:
         return
 
-    total_prize = round(quiz.amount * env.QUIZ_MULTIPLIER, 2)
+    erros_count = await count_quiz_erros(quiz_id, quiz.truth)
+    total_prize: int = calc_bonus(quiz.amount * env.QUIZ_MULTIPLIER, 100, erros_count)
+
     alternatives_string = '\n'.join(['%s) %s' % (ALTERNATIVES.get(q+1, None), al) for q, al in enumerate(quiz.alternatives)])
     choice: int = get_alternative_by_name(quiz.truth.name)
     embed = Embed(
@@ -40,13 +42,14 @@ async def QuizFinished(
     losers = ''
     result: tuple[QuizBet, User]
     objects: List[CoinsHistory|Scores] = []
+
     async with AsyncDatabaseSession as session:
         for result in results:
             bet, user = result
             user_id = bet.user_id
             choice = bet.choice
             if choice == quiz.truth:
-                score = randint(10, 20)
+                score = randint(10, 20) * erros_count
                 awarded += f'\n{await getStickerByIdUser(user_id)} <@{user.discord_user_id}> +{score}xp:zap:'
                 objects.extend(
                     [
@@ -99,9 +102,8 @@ class QuizManager(commands.Cog):
         if payload is None:
             quiz_finished_embed = Embed(
                 title=self.quiz.question,
-                description="**Prêmio: ** :coin: %.2f coins **%iX**\n**Bilhete: ** :tickets: %.2f" % (
+                description="**Prêmio Inicial: ** :coin: %.2f coins **+bônus**\n**Bilhete: ** :tickets: %.2f" % (
                     self.quiz.amount * env.QUIZ_MULTIPLIER,
-                    env.QUIZ_MULTIPLIER,
                     self.quiz.amount
                 ),
                 color=0x147BBD
@@ -116,9 +118,8 @@ class QuizManager(commands.Cog):
         self.quiz: Quiz = self.quiz if self.quiz is not None else Quiz(**loads(payload))
         embed = Embed(
             title=self.quiz.question,
-            description="**Prêmio: ** :coin: %.2f coins **%iX**\n**Bilhete: ** :tickets: %.2f" % (
+            description="**Prêmio Inicial: ** :coin: %.2f coins **+bônus**\n**Bilhete: ** :tickets: %.2f" % (
                 self.quiz.amount * env.QUIZ_MULTIPLIER,
-                env.QUIZ_MULTIPLIER,
                 self.quiz.amount
             ),
             color=0x147BBD

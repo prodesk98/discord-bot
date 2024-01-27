@@ -1,5 +1,5 @@
 from sqlalchemy import select, func
-from database import CoinsHistory, User, AsyncDatabaseSession
+from database import CoinsHistory, AsyncDatabaseSession
 
 
 async def registerCoinHistory(user_id: int, amount: int) -> None:

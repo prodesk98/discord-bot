@@ -17,9 +17,8 @@ from views import QuizChoicesButtons
 async def create(data: Quiz, theme: str, amount: int, interaction: Interaction) -> None:
     embed = Embed(
         title=data.question,
-        description="**Prêmio: ** :coin: %.2f coins **%iX**\n**Bilhete: ** :tickets: %.2f" % (
+        description="**Prêmio Inicial: ** :coin: %.2f coins **+bônus**\n**Bilhete: ** :tickets: %.2f" % (
             amount * env.QUIZ_MULTIPLIER,
-            env.QUIZ_MULTIPLIER,
             amount
         ),
         color=0x147BBD
