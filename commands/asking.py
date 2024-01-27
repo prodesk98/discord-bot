@@ -4,7 +4,7 @@ from aiohttp import ClientSession
 from utils import (
     registerCoinHistory, hasCoinsAvailable, hasLevelPermissions,
     has_account, get_user_by_discord_user_id, get_score_by_user_id,
-    get_pet, calc_pet_rarity
+    get_pet, calc_pet_rarity, pet_usage_count, pet_usage
 )
 
 from orjson import loads
@@ -37,6 +37,14 @@ async def AskingCommand(
     if not (await hasCoinsAvailable(user.id, asking_cost)):
         raise Exception(f"Você precisa de {asking_cost} coins para executar esse comando.\n\nExecute /me")
 
+    asking_usage = await pet_usage_count(pet.id)
+    if asking_usage > pet.level:
+        if pet.level < env.PET_LEVEL_LIMIT:
+            raise Exception(f"O Nível do seu pet permite apenas {asking_usage} perguntas no intervalo de 5 horas.\n\n"
+                            f"Execute /pet para subir o nível.")
+        else:
+            raise Exception(f"Cheguei ao limite de perguntas, tente novamente daqui 5 horas.")
+
     async with ClientSession() as session:
         async with session.post(f"{env.LEARN_BOT_ENDPOINT}/asking", headers={
             "Authorization": f"Bearer {env.LEARN_BOT_AUTHORIZATION}"
@@ -63,6 +71,7 @@ async def AskingCommand(
                 pet_thumbnail = File(f"assets/gifs/pets/{pet.thumbnail}", filename=pet.thumbnail)
                 asking_embed.set_thumbnail(url=f"attachment://{pet.thumbnail}")
 
+                await pet_usage(pet.id, asking_usage+1)
                 await interaction.edit_original_response(
                     embed=asking_embed,
                     attachments=[pet_thumbnail]

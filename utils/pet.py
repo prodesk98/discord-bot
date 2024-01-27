@@ -1,5 +1,6 @@
 from discord import Embed, File
 
+from cache import aget, aset
 from database import AsyncDatabaseSession, Pet
 from sqlalchemy import select, func
 
@@ -79,3 +80,13 @@ def pet_card(pet: PetModel) -> tuple[Embed, File]:
     )
     embed.set_thumbnail(url=f"attachment://{pet.thumbnail}")
     return embed, thumbnail
+
+async def pet_usage_count(pet_id: int) -> int:
+    def normal(v: bytes|None) -> str:
+        if v is None:
+            return "0"
+        return v.decode()
+    return normalize_value(normal(await aget(f"pet:usage:{pet_id}")))
+
+async def pet_usage(pet_id: int, usage_count: int) -> None:
+    await aset(f"pet:usage:{pet_id}", f"{usage_count}".encode(), ex=5*60*60)
