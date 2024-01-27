@@ -49,7 +49,8 @@ async def QuizFinished(
             user_id = bet.user_id
             choice = bet.choice
             if choice == quiz.truth:
-                score = randint(10, 20) * erros_count
+                score = randint(10, 20)
+                score += score * erros_count
                 awarded += f'\n{await getStickerByIdUser(user_id)} <@{user.discord_user_id}> +{score}xp:zap:'
                 objects.extend(
                     [

@@ -9,10 +9,12 @@ from config import Pet as PetModel, pets, env
 async def has_pet(user_id: int) -> bool:
     async with AsyncDatabaseSession as session:
         count = normalize_value(
-            (await session.execute(
-                select(func.count(Pet.id).label("count"))
-                .where(Pet.user_id == user_id) # type: ignore
-            )).scalar_one_or_none()
+            (
+                await session.execute(
+                    select(func.count(Pet.id).label("count"))
+                    .where(Pet.user_id == user_id) # type: ignore
+                )
+            ).scalar_one_or_none()
         )
         return count > 0
 
@@ -23,19 +25,27 @@ async def register_pet(pet: Pet) -> None:
 
 async def get_pet(user_id: int) -> PetModel|None:
     async with AsyncDatabaseSession as session:
-        pet: Pet|None = (await session.execute(
-            select(Pet).where(Pet.user_id == user_id) # type: ignore
-        )).scalar_one_or_none()
+        pet: Pet|None = (
+            await session.execute(
+                select(Pet).where(Pet.user_id == user_id) # type: ignore
+            )
+        ).scalar_one_or_none()
+        if pet is None:
+            return
         pet_model: PetModel = next(iter([p for p in pets if p.id == pet.config_pet_id]))
         copy = pet_model.model_dump().copy()
         copy.update({"level": pet.level, "id": pet.id})
         return PetModel(**copy)
 
-async def pet_level_up(pet: Pet) -> PetModel:
+async def pet_level_up(pet: Pet) -> PetModel|None:
     async with AsyncDatabaseSession as session:
-        pet: Pet = (await session.execute(
-            select(Pet).where(Pet.id == pet.id)  # type: ignore
-        )).scalar_one_or_none()
+        pet: Pet = (
+            await session.execute(
+                select(Pet).where(Pet.id == pet.id)  # type: ignore
+            )
+        ).scalar_one_or_none()
+        if pet is None:
+            return
         pet.level += 1
         await session.commit()
 
@@ -61,7 +71,7 @@ def pet_card(pet: PetModel) -> tuple[Embed, File]:
     pet_level_format = pet.level if pet.level < 10 else f"**{pet.level}**"
     thumbnail = File(f"assets/gifs/pets/{pet.thumbnail}", filename=pet.thumbnail)
     embed = Embed(
-        title=f"{pet.name}!",
+        title=pet.name,
         description=f"{pet.description}\n\n"
                     f"Raridade: {pet_rarity_format.title()}\n"
                     f"Nível: {pet_level_format}/{env.PET_LEVEL_LIMIT} %s" % (

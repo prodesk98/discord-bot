@@ -28,6 +28,7 @@ class CoinsHistory(Base):
     id = Column(Integer, Sequence("coins_history_id_seq"), primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     amount = Column(Integer)
+    description = Column(String(155))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 

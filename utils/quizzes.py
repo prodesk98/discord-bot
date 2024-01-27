@@ -79,7 +79,7 @@ async def quiz_is_limited_by_time() -> QuizLimitedByTimeResponse:
             "afternoon": "Tarde"
         }.get(k, "night")
     return QuizLimitedByTimeResponse(
-        allowed=normalize_value(await aget(f"open_quiz:{time_id}")) <= env.LIMIT_OPEN_QUIZ_BY_TIME * 2,  #boost x2
+        allowed=normalize_value(await aget(f"open_quiz:{time_id}")) <= env.LIMIT_OPEN_QUIZ_BY_TIME * (2 if time_id == "night" else 1),  #boost x2 night
         current_time=translate(time_id)
     )
 

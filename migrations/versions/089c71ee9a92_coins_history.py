@@ -23,6 +23,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer, primary_key=True, autoincrement=True, nullable=False, unique=True),
         sa.Column("user_id", sa.Integer, sa.ForeignKey("users.id")),
         sa.Column("amount", sa.Integer),
+        sa.Column("description", sa.String(155), nullable=True, default=None),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
 

@@ -1,5 +1,4 @@
 from discord import Interaction, Embed, File
-from loguru import logger
 from sqlalchemy import select, func
 from sqlalchemy.sql import desc
 
@@ -28,6 +27,9 @@ async def MeCommand(
         user = user.scalar()
         is_member = user is not None
         if not is_member:
+            if interaction.guild_id is None:
+                raise Exception("I only work within channels.")
+
             user = User(
                 discord_user_id=str(interaction.user.id),
                 discord_guild_id=str(interaction.guild_id),
@@ -44,11 +46,14 @@ async def MeCommand(
 
             last_coin_history: datetime = (
                 await session.execute(
-                    select(CoinsHistory.created_at).where(CoinsHistory.user_id == user.id).order_by(
-                        desc(CoinsHistory.created_at) #type: ignore
+                    select(CoinsHistory.created_at)
+                        .where(CoinsHistory.user_id == user.id)
+                        .where(CoinsHistory.description == "recovery") #type: ignore
+                        .order_by(
+                            desc(CoinsHistory.created_at) #type: ignore
+                        )
                     )
-                )
-            ).scalar()
+                ).scalar()
 
             coin_history_timestamp = last_coin_history.timestamp()
             rescues_in_hours = (datetime.now().timestamp() - coin_history_timestamp) / 3600
@@ -63,7 +68,8 @@ async def MeCommand(
                 session.add(
                     CoinsHistory(
                         user_id=user.id,
-                        amount=total_rescue
+                        amount=total_rescue,
+                        description="recovery"
                     )
                 )
                 session.add(
@@ -74,7 +80,6 @@ async def MeCommand(
                 )
                 balance += total_rescue
                 score += score_received
-                await PlayAudioEffect(interaction, "coins.wav")
 
             if user.discord_guild_id is None:
                 user.discord_guild_id = str(interaction.guild_id)
@@ -85,7 +90,7 @@ async def MeCommand(
 
     if not is_member:
         coins_welcome = 100
-        await registerCoinHistory(user.id, amount=coins_welcome)
+        await registerCoinHistory(user.id, amount=coins_welcome, description="recovery")
 
         embed = Embed(
             title=f"Bem-vindo!",

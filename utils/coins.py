@@ -2,12 +2,13 @@ from sqlalchemy import select, func
 from database import CoinsHistory, AsyncDatabaseSession
 
 
-async def registerCoinHistory(user_id: int, amount: int) -> None:
+async def registerCoinHistory(user_id: int, amount: int, description: str = None) -> None:
     async with AsyncDatabaseSession as session:
         session.add(
             CoinsHistory(
                 user_id=user_id,
                 amount=amount,
+                description=description
             )
         )
         await session.commit()
