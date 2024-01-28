@@ -77,7 +77,7 @@ class QuizChoicesButtons(ui.View):
             await interaction.response.send_message(  # type: ignore
                 embed=Embed(
                     title="Para aí!",
-                    description="Você não têm money para pagar o bilhete.",
+                    description="Você não têm coins para pagar o bilhete.",
                     color=0xE02B2B
                 ),
                 ephemeral=True
