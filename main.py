@@ -208,6 +208,7 @@ async def me(interaction: Interaction):
 
 @ping.error
 @level.error
+@guild.error
 @pets_informations.error
 @pet.error
 @ranking.error

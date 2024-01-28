@@ -29,6 +29,6 @@ async def RankingCommand(interaction: Interaction) -> None:
     )
     image = File(fp="assets/gifs/settings/fire.gif", filename="fire.gif")
     embed.set_image(url="attachment://fire.gif")
-    embed.add_field(name="Usuário", value="\n".join(usernames), inline=True)
-    embed.add_field(name="Experiência", value="\n".join(scores), inline=True)
+    embed.add_field(name="Usuários", value="\n".join(usernames), inline=True)
+    embed.add_field(name="Experiências", value="\n".join(scores), inline=True)
     await interaction.edit_original_response(embed=embed, attachments=[image])
