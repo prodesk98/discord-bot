@@ -73,3 +73,10 @@ class Pet(Base):
     informal_greeting = Column(JSON)
     level = Column(Integer)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class Guild(Base):
+    __tablename__ = "guilds"
+
+    id = Column(Integer, Sequence("guilds_id_seq"), primary_key=True)
+    name = Column(String(155))
+    emoji = Column(String(32))
