@@ -2,7 +2,7 @@ from discord import Interaction, Embed, File
 
 from utils import (
     has_user_guild, get_user_by_discord_user_id, recruit_guild,
-    guild_members_count, guild_scores_count, get_user_guild, get_ranking_members_guild, scoreToSticker
+    guild_members_count, guild_scores_count, get_guild_by_user_id, get_ranking_members_guild, scoreToSticker
 )
 
 
@@ -18,7 +18,8 @@ async def MyGuildCommand(
         recruit = await recruit_guild(user.id)
         recruit_embed = Embed(
             title=recruit.name,
-            description=f"Você foi recrutado para a Guilda **{recruit.name}**.\n\n"
+            description=f"Você foi recrutado para a Guilda **{recruit.name}**.\n"
+                        f"Contribua com **xp** para manter\nsua guilda no topo.\n\n"
                         f"Membros: {await guild_members_count(recruit.id)}\n"
                         f"Experiência Total: {await guild_scores_count(recruit.id)}xp"
         )
@@ -30,7 +31,7 @@ async def MyGuildCommand(
         )
         return
 
-    guild = await get_user_guild(user.id)
+    guild = await get_guild_by_user_id(user.id)
     usernames = []
     scores = []
 
@@ -41,7 +42,8 @@ async def MyGuildCommand(
     guild_embed = Embed(
         title=guild.name,
         description=f"Membros: {await guild_members_count(guild.id)}\n"
-                    f"Experiência Total: {await guild_scores_count(guild.id)}xp"
+                    f"Experiência Total: {await guild_scores_count(guild.id)}xp\n\n"
+                    f"TOP 10 MEMBROS DA GUILDA"
     )
     guild_emoji = File(fp=f"assets/gifs/guilds/guild_{guild.emoji}.gif", filename=f"guild_{guild.emoji}.gif")
     guild_embed.set_image(url=f"attachment://guild_{guild.emoji}.gif")

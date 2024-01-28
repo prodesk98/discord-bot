@@ -1,7 +1,7 @@
 from typing import List
 
 from database import AsyncDatabaseSession, Guild, User, Scores
-from sqlalchemy import select, func, asc, desc
+from sqlalchemy import select, func, asc, desc, and_
 
 from models import GuildRanking
 from .math import  normalize_value
@@ -17,7 +17,7 @@ async def has_user_guild(user_id: int) -> bool:
         )
         return guild > 0
 
-async def get_user_guild(user_id: int) -> Guild:
+async def get_guild_by_user_id(user_id: int) -> Guild:
     async with AsyncDatabaseSession as session:
         guild = (await session.execute(
             select(Guild).join(User).where(User.id == user_id).where(Guild.id == User.guild_id) # type: ignore
@@ -34,8 +34,8 @@ async def get_ranking_members_guild(guild_id: int) -> List[GuildRanking]:
             .where(Guild.id == guild_id) # type: ignore
             .where(User.guild_id == Guild.id)
             .where(User.id == Scores.user_id)
-            .group_by(User.discord_user_id)
-            .order_by(desc("xp"))
+            .group_by(User.discord_user_id, Guild.id)
+            .order_by(desc("xp"), asc(Guild.id)) # type: ignore
             .limit(10)
         )).fetchall()
         ranking_members: List[GuildRanking] = []
@@ -77,7 +77,7 @@ async def recruit_guild(user_id: int) -> Guild:
             .select_from(Guild)
             .outerjoin(User, Guild.id == User.guild_id) # type: ignore
             .group_by(Guild.id)
-            .order_by(asc("members"))
+            .order_by(asc("members"), asc(Guild.id)) # type: ignore
             .limit(1)
         )
         available = guild_available.scalar()
