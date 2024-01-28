@@ -39,6 +39,7 @@ class Settings(BaseModel):
     LEARN_BOT_AUTHORIZATION: Optional[str] = getenv("LEARN_BOT_AUTHORIZATION")
     LEARN_BOT_ENABLED: Optional[bool] = bool(getenv("LEARN_BOT_ENABLED", "true") == "true")
     ASKING_COST: Optional[int] = int(getenv("ASKING_COST", 20))
+    LEARN_COST: Optional[int] = int(getenv("LEARN_COST", 30))
     QUIZ_MULTIPLIER: Optional[int] = int(getenv("QUIZ_MULTIPLIER", 3))
     LIMIT_OPEN_QUIZ_BY_TIME: Optional[int] = int(getenv("LIMIT_OPEN_QUIZ_BY_TIME", 8))
     PET_LEVEL_LIMIT: Optional[int] = int(getenv("PET_LEVEL_LIMIT", 15))

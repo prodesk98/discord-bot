@@ -14,7 +14,8 @@ from commands import (
     AskingCommand,
     QuizCommand,
     RankingCommand,
-    PetCommand
+    PetCommand,
+    MyGuildCommand
 )
 from utils import has_bot_manager_permissions
 from cache import aget, adel
@@ -42,6 +43,16 @@ class Bot(commands.Bot):
 
 
 bot = Bot()
+
+@bot.tree.command(
+    name="guild",
+    description="Meu clã"
+)
+@app_commands.checks.cooldown(1, 60, key=lambda i: (i.guild_id, i.user.id))
+async def guild(interaction: Interaction):
+    await interaction.response.defer(ephemeral=True)
+    await MyGuildCommand(interaction)
+
 
 @bot.tree.command(
     name="quiz",

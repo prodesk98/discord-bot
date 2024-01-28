@@ -14,7 +14,7 @@ from models import QuizEnumChoices
 
 # revision identifiers, used by Alembic.
 revision: str = '5ddd0f19e259'
-down_revision: Union[str, None] = '056fa30634e8'
+down_revision: Union[str, None] = '24f741675b66'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
