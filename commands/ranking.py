@@ -1,5 +1,4 @@
 from discord import Interaction, Embed, File
-from loguru import logger
 
 from database import Scores, User, AsyncDatabaseSession
 from sqlalchemy import select, func, desc, asc
@@ -24,12 +23,12 @@ async def RankingCommand(interaction: Interaction) -> None:
             .order_by(desc("rank"), asc("id"))
             .limit(10)
         )).fetchall()
-        for i, rank in enumerate(ranking):
+        for n, rank in enumerate(ranking):
             user_id, discord_user_id, score = rank
-            if i == 0:
+            if n == 0:
                 guild_top_one = await get_guild_by_user_id(user_id)
 
-            usernames.append(f"{scoreToSticker(score)} <@{discord_user_id}>")
+            usernames.append(f"{n+1}º {scoreToSticker(score)} <@{discord_user_id}>")
             scores.append(f"{score}xp")
     embed = Embed(
         title="TOP 10 RANKING",

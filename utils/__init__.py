@@ -20,5 +20,6 @@ from .pet import (
 )
 from .guild import (
     has_user_guild, recruit_guild, guild_members_count,
-    guild_scores_count, get_guild_by_user_id, get_ranking_members_guild
+    guild_scores_count, get_guild_by_user_id, get_ranking_members_guild,
+    get_guild_by_id
 )

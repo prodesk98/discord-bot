@@ -15,7 +15,8 @@ from commands import (
     QuizCommand,
     RankingCommand,
     PetCommand,
-    MyGuildCommand
+    MyGuildCommand,
+    AllGuilds
 )
 from utils import has_bot_manager_permissions
 from cache import aget, adel
@@ -53,13 +54,22 @@ async def guild(interaction: Interaction):
     await interaction.response.defer(ephemeral=True)
     await MyGuildCommand(interaction)
 
+@bot.tree.command(
+    name="guilds",
+    description="Exiba o ranking das guildas"
+)
+@app_commands.checks.cooldown(1, 300.0, key=lambda i: (i.guild_id, i.user.id))
+async def guilds(interaction: Interaction):
+    await interaction.response.defer(ephemeral=True)
+    await AllGuilds(interaction)
+
 
 @bot.tree.command(
     name="quiz",
     description="Criar um Quiz"
 )
 @app_commands.checks.cooldown(1, 60, key=lambda i: (i.guild_id, i.user.id))
-async def quiz(interaction: Interaction, tema: str, valor: int):
+async def quiz(interaction: Interaction, tema: str, valor: int, rodadas: int):
     await interaction.response.defer(ephemeral=False)
 
     if not has_bot_manager_permissions(interaction.user.roles):
@@ -100,7 +110,7 @@ Exiba o ranking do canal executando o comando /ranking."""
     name="pet",
     description="Meu pet"
 )
-@app_commands.checks.cooldown(1, 1.0, key=lambda i: (i.guild_id, i.user.id))
+@app_commands.checks.cooldown(1, 15.0, key=lambda i: (i.guild_id, i.user.id))
 async def pet(interaction: Interaction):
     await interaction.response.defer(ephemeral=True)
     await PetCommand(interaction)
@@ -164,7 +174,7 @@ async def asking(interaction: Interaction, pergunta: str):
     name="instruct",
     description="Ensinar ao robô"
 )
-@app_commands.checks.cooldown(1, 10.0, key=lambda i: (i.guild_id, i.user.id))
+@app_commands.checks.cooldown(1, 15.0, key=lambda i: (i.guild_id, i.user.id))
 async def instruct(interaction: Interaction, texto: str):
     await interaction.response.defer(ephemeral=True)
 
@@ -200,7 +210,7 @@ async def ping(interaction: Interaction):
     name="me",
     description="Minha conta"
 )
-@app_commands.checks.cooldown(2, 15, key=lambda i: (i.guild_id, i.user.id))
+@app_commands.checks.cooldown(2, 15.0, key=lambda i: (i.guild_id, i.user.id))
 async def me(interaction: Interaction):
     await interaction.response.defer(ephemeral=True)
     await MeCommand(interaction)
@@ -209,6 +219,7 @@ async def me(interaction: Interaction):
 @ping.error
 @level.error
 @guild.error
+@guilds.error
 @pets_informations.error
 @pet.error
 @ranking.error

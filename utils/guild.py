@@ -1,9 +1,9 @@
 from typing import List
 
 from database import AsyncDatabaseSession, Guild, User, Scores
-from sqlalchemy import select, func, asc, desc, and_
+from sqlalchemy import select, func, asc, desc, distinct
 
-from models import GuildRanking
+from models import GuildMemberRanking, GuildRanking
 from .math import  normalize_value
 
 
@@ -24,7 +24,39 @@ async def get_guild_by_user_id(user_id: int) -> Guild:
         )).scalar()
         return guild
 
-async def get_ranking_members_guild(guild_id: int) -> List[GuildRanking]:
+async def get_guild_by_id(guild_id: int) -> Guild|None:
+    async with AsyncDatabaseSession as session:
+        return (await session.execute(
+            select(Guild).where(Guild.id == guild_id) # type: ignore
+        )).scalar()
+
+async def guild_ranking() -> List[GuildRanking]:
+    result: List[GuildRanking] = []
+    async with AsyncDatabaseSession as session:
+        guilds = (await session.execute(
+            select(Guild.name, Guild.id, func.sum(Scores.amount).label('xp'), func.count(distinct(User.id)).label('members')) # type: ignore
+            .select_from(Guild)
+            .outerjoin(User)
+            .outerjoin(Scores)
+            .where(User.guild_id == Guild.id) # type: ignore
+            .where(User.id == Scores.user_id)
+            .group_by(Guild.id, Guild.name)
+            .order_by(desc("xp"), asc(Guild.id))  # type: ignore
+            .limit(10)
+        )).fetchall()
+    for guild in guilds:
+        name, id, xp, members = guild
+        result.append(
+            GuildRanking(
+                id=id,
+                name=name,
+                xp=xp,
+                members=members
+            )
+        )
+    return result
+
+async def get_ranking_members_guild(guild_id: int) -> List[GuildMemberRanking]:
     async with AsyncDatabaseSession as session:
         results = (await session.execute(
             select(User.discord_user_id, func.sum(Scores.amount).label('xp'))
@@ -38,11 +70,11 @@ async def get_ranking_members_guild(guild_id: int) -> List[GuildRanking]:
             .order_by(desc("xp"), asc(Guild.id)) # type: ignore
             .limit(10)
         )).fetchall()
-        ranking_members: List[GuildRanking] = []
+        ranking_members: List[GuildMemberRanking] = []
         for result in results:
             discord_user_id, xp = result
             ranking_members.append(
-                GuildRanking(
+                GuildMemberRanking(
                     score=xp,
                     discord_user_id=discord_user_id
                 )

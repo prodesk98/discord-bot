@@ -4,6 +4,7 @@ from utils import (
     has_user_guild, get_user_by_discord_user_id, recruit_guild,
     guild_members_count, guild_scores_count, get_guild_by_user_id, get_ranking_members_guild, scoreToSticker
 )
+from utils.guild import guild_ranking, get_guild_by_id
 
 
 async def MyGuildCommand(
@@ -53,4 +54,39 @@ async def MyGuildCommand(
     await interaction.edit_original_response(
         embed=guild_embed,
         attachments=[guild_emoji]
+    )
+
+
+async def AllGuilds(
+    interaction: Interaction
+):
+    guilds = []
+    scores = []
+    members = []
+    ranking = await guild_ranking()
+    if len(ranking) == 0:
+        raise Exception("Nenhuma guilda foi encontrada.")
+
+    guild_embed = Embed(
+        title=f"TOP 10 GUILDAS",
+        description=""
+    )
+    top_one_guild = await get_guild_by_id(ranking[0].id)
+    guild_emoji = None
+    if top_one_guild is not None:
+        guild_emoji = File(fp=f"assets/gifs/guilds/guild_{top_one_guild.emoji}.gif", filename=f"guild_{top_one_guild.emoji}.gif")
+        guild_embed.set_image(url=f"attachment://guild_{top_one_guild.emoji}.gif")
+
+    for n, guild in enumerate(ranking):
+        guilds.append(f"{n+1}º {guild.name}")
+        scores.append(f"{guild.xp}xp")
+        members.append(str(guild.members))
+
+    guild_embed.add_field(name="Nome", value="\n".join(guilds), inline=True)
+    guild_embed.add_field(name="Experiências", value="\n".join(scores), inline=True)
+    guild_embed.add_field(name="Membros", value="\n".join(members), inline=True)
+
+    await interaction.edit_original_response(
+        embed=guild_embed,
+        attachments=[guild_emoji] if guild_emoji is not None else []
     )
