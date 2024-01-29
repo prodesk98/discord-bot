@@ -7,7 +7,7 @@ from config import env
 from utils import (
     has_bot_manager_permissions, hasLevelPermissions, get_score_by_user_id,
     get_user_by_discord_user_id, get_pet, hasCoinsAvailable,
-    pet_usage_count, pet_usage
+    pet_usage_count, pet_usage, has_account
 )
 
 
@@ -15,10 +15,10 @@ async def InstructCommand(
     interaction: Interaction,
     text: str
 ) -> None:
-    user = await get_user_by_discord_user_id(interaction.user.id)
-
-    if user is None:
+    if not (await has_account(interaction.user.id)):
         raise Exception("Você precisa ter uma conta para executar esse comando.\n\nExecute /me")
+
+    user = await get_user_by_discord_user_id(interaction.user.id)
 
     pet = await get_pet(user.id)
     if pet is None:
@@ -28,15 +28,17 @@ async def InstructCommand(
 
     score = await  get_score_by_user_id(user.id)
     has_manager = has_bot_manager_permissions(interaction.user.roles)
+
     if not has_manager and not hasLevelPermissions(score, 2):
-        raise Exception("Você não tem permissão para executar este comando. Apenas líderes ou usuários de nível 3 têm permissão.\n\nExecute /levels para obter mais informações...")
+        raise Exception("Você precisa ter no mínimo 2 Níveis para executar esse comando.\n\n"
+                        "Execute /me - para ver o seu nível\nExecute /levels - para mais informações...")
 
     learn_cost = env.LEARN_COST
     if not (await hasCoinsAvailable(user.id, learn_cost)):
         raise Exception(f"Você precisa de {learn_cost} coins para executar esse comando.\n\nExecute /me")
 
     count_pet_usage = await pet_usage_count(pet.id)
-    if count_pet_usage > pet.level:
+    if count_pet_usage > pet.level and not has_manager:
         if pet.level < env.PET_LEVEL_LIMIT:
             raise Exception(f"O Nível do seu pet permite apenas {count_pet_usage} treinamentos no intervalo de 5 horas.\n\n"
                             f"Execute /pet para subir o nível.")

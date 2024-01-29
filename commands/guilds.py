@@ -40,7 +40,7 @@ async def MyGuildCommand(
         scores.append(f"{rank.score}xp")
 
     guild_embed = Embed(
-        title=guild.name,
+        title=f"Guilda {guild.name}",
         description=f"Membros: {await guild_members_count(guild.id)}\n"
                     f"Experiência Total: {await guild_scores_count(guild.id)}xp\n\n"
                     f"TOP 10 MEMBROS DA GUILDA"

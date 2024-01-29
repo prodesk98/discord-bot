@@ -4,7 +4,8 @@ from aiohttp import ClientSession
 from utils import (
     registerCoinHistory, hasCoinsAvailable, hasLevelPermissions,
     has_account, get_user_by_discord_user_id, get_score_by_user_id,
-    get_pet, calc_pet_rarity, pet_usage_count, pet_usage
+    get_pet, calc_pet_rarity, pet_usage_count, pet_usage,
+    has_bot_manager_permissions
 )
 
 from orjson import loads
@@ -20,16 +21,17 @@ async def AskingCommand(
         raise Exception("Você precisa ter uma conta para executar esse comando.\n\nExecute /me")
 
     user = await get_user_by_discord_user_id(interaction.user.id)
-    pet = await get_pet(user.id)
 
+    pet = await get_pet(user.id)
     if pet is None:
         raise Exception("Você precisa ter um pet para executar esse comando.\n\n"
                         "Por favor, execute /pet\n\n"
                         "Ou /pets para mais informações...")
 
     score = await  get_score_by_user_id(user.id)
+    has_manager = has_bot_manager_permissions(interaction.user.roles)
 
-    if not hasLevelPermissions(score, 2):
+    if not has_manager and not hasLevelPermissions(score, 2):
         raise Exception("Você precisa ter no mínimo 2 Níveis para executar esse comando.\n\n"
                         "Execute /me - para ver o seu nível\nExecute /levels - para mais informações...")
 
