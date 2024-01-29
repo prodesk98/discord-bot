@@ -35,7 +35,7 @@ async def capture_pet(user: User) -> PetModel:
             return pet
 
 async def PetCommand(interaction: Interaction) -> None:
-    user = await get_user_by_discord_user_id(interaction.user.id)
+    user = await get_user_by_discord_user_id(interaction.user.id, interaction.guild_id)
     if user is None:
         raise Exception("Você precisa ter uma conta para executar esse comando.\n\nExecute /me")
 

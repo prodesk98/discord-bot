@@ -15,10 +15,10 @@ async def InstructCommand(
     interaction: Interaction,
     text: str
 ) -> None:
-    if not (await has_account(interaction.user.id)):
+    if not (await has_account(interaction.user.id, interaction.guild_id)):
         raise Exception("Você precisa ter uma conta para executar esse comando.\n\nExecute /me")
 
-    user = await get_user_by_discord_user_id(interaction.user.id)
+    user = await get_user_by_discord_user_id(interaction.user.id, interaction.guild_id)
 
     pet = await get_pet(user.id)
     if pet is None:
@@ -52,7 +52,7 @@ async def InstructCommand(
         }, json={
           "content": text,
           "username": user.discord_nick,
-          "namespace": md5(f"{user.id}_{pet.id}".encode()).hexdigest() if not has_manager else "default"
+          "namespace": md5(f"{user.id}_{pet.id}".encode()).hexdigest() if not has_manager else f"default_{user.discord_guild_id}"
         }) as response:
             if response.ok:
                 embed = Embed(

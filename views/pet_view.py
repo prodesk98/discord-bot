@@ -17,7 +17,7 @@ class PetButtons(ui.View):
 
     @staticmethod
     async def level_upgrade(interaction: Interaction):
-        user = await get_user_by_discord_user_id(interaction.user.id)
+        user = await get_user_by_discord_user_id(interaction.user.id, interaction.guild_id)
         pet = await get_pet(user.id)
 
         amount = calc_pet_level(pet.level)

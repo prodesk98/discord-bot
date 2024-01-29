@@ -18,6 +18,7 @@ async def RankingCommand(interaction: Interaction) -> None:
                 func.sum(Scores.amount).label('rank')
             )
             .join(User)
+            .where(User.discord_guild_id == str(interaction.guild_id)) # type: ignore
             .where(User.id == Scores.user_id) # type: ignore
             .group_by(User.id, User.discord_user_id)
             .order_by(desc("rank"), asc("id"))

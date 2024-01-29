@@ -30,7 +30,7 @@ async def get_guild_by_id(guild_id: int) -> Guild|None:
             select(Guild).where(Guild.id == guild_id) # type: ignore
         )).scalar()
 
-async def guild_ranking() -> List[GuildRanking]:
+async def guild_ranking(discord_guild_id: int) -> List[GuildRanking]:
     result: List[GuildRanking] = []
     async with AsyncDatabaseSession as session:
         guilds = (await session.execute(
@@ -38,6 +38,7 @@ async def guild_ranking() -> List[GuildRanking]:
             .select_from(Guild)
             .outerjoin(User)
             .outerjoin(Scores)
+            .where(User.discord_guild_id == str(discord_guild_id)) # type: ignore
             .where(User.guild_id == Guild.id) # type: ignore
             .where(User.id == Scores.user_id)
             .group_by(Guild.id, Guild.name)
@@ -56,7 +57,7 @@ async def guild_ranking() -> List[GuildRanking]:
         )
     return result
 
-async def get_ranking_members_guild(guild_id: int) -> List[GuildMemberRanking]:
+async def get_ranking_members_guild(guild_id: int, discord_guild_id: int) -> List[GuildMemberRanking]:
     async with AsyncDatabaseSession as session:
         results = (await session.execute(
             select(User.discord_user_id, func.sum(Scores.amount).label('xp'))
@@ -64,6 +65,7 @@ async def get_ranking_members_guild(guild_id: int) -> List[GuildMemberRanking]:
             .join(User)
             .join(Scores)
             .where(Guild.id == guild_id) # type: ignore
+            .where(User.discord_guild_id == str(discord_guild_id))
             .where(User.guild_id == Guild.id)
             .where(User.id == Scores.user_id)
             .group_by(User.discord_user_id, Guild.id)

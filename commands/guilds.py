@@ -10,7 +10,7 @@ from utils.guild import guild_ranking, get_guild_by_id
 async def MyGuildCommand(
     interaction: Interaction
 ):
-    user = await get_user_by_discord_user_id(interaction.user.id)
+    user = await get_user_by_discord_user_id(interaction.user.id, interaction.guild_id)
     if user is None:
         raise Exception("Você precisa ter uma conta para executar esse comando.\n\nExecute /me")
 
@@ -36,7 +36,7 @@ async def MyGuildCommand(
     usernames = []
     scores = []
 
-    for rank in (await get_ranking_members_guild(user.guild_id)):
+    for rank in (await get_ranking_members_guild(user.guild_id, interaction.guild_id)):
         usernames.append(f"{scoreToSticker(rank.score)} <@{rank.discord_user_id}>")
         scores.append(f"{rank.score}xp")
 
@@ -63,7 +63,7 @@ async def AllGuilds(
     guilds = []
     scores = []
     members = []
-    ranking = await guild_ranking()
+    ranking = await guild_ranking(interaction.guild_id)
     if len(ranking) == 0:
         raise Exception("Nenhuma guilda foi encontrada.")
 

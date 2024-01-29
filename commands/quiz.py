@@ -39,7 +39,7 @@ async def create(data: Quiz, theme: str, amount: int, interaction: Interaction) 
     )
     quizzes = Quizzes(**metadata)
 
-    user = await get_user_by_discord_user_id(interaction.user.id)
+    user = await get_user_by_discord_user_id(interaction.user.id, interaction.guild_id)
 
     await registerQuizzesHistory(quizzes)
     await aset(f"quiz:opened:{user.discord_guild_id}", str(quizzes.id).encode(), ex=17)
@@ -54,7 +54,7 @@ async def QuizCommand(
     theme: str,
     amount: int
 ) -> None:
-    if not (await has_account(interaction.user.id)):
+    if not (await has_account(interaction.user.id, interaction.guild_id)):
         raise Exception("Você precisa ter uma conta para executar esse comando.\n\nExecute /me")
 
     has_quiz_opened = await aget(f"quiz:opened:{interaction.guild_id}")

@@ -21,9 +21,10 @@ async def MeCommand(
     rescue_message = ""
 
     async with AsyncDatabaseSession as session:
-        user = await session.execute(select(User).where(
-            User.discord_user_id == str(interaction.user.id) #type: ignore
-        ))
+        user = await session.execute(select(User)
+        .where(User.discord_user_id == str(interaction.user.id))  #type: ignore
+        .where(User.discord_guild_id == str(interaction.guild_id)))
+
         user = user.scalar()
         is_member = user is not None
         if not is_member:

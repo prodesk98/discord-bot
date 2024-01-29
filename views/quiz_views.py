@@ -33,7 +33,7 @@ class QuizChoicesButtons(ui.View):
         await self.bet(interaction, button)
 
     async def bet(self, interaction: Interaction, button: ui.Button):
-        if not (await has_account(interaction.user.id)):
+        if not (await has_account(interaction.user.id, interaction.guild_id)):
             await interaction.response.send_message( # type: ignore
                 embed=Embed(
                     title="Acesso bloqueado!",
@@ -43,7 +43,7 @@ class QuizChoicesButtons(ui.View):
             )
             return
 
-        user = await get_user_by_discord_user_id(interaction.user.id)
+        user = await get_user_by_discord_user_id(interaction.user.id, interaction.guild_id)
 
         logger.info(f"[QUIZ BUTTON EVENT] {user.discord_nick} chose {button.custom_id}")
         has_quiz_opened = await aget(f"quiz:opened:{interaction.guild_id}")

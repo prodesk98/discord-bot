@@ -17,10 +17,10 @@ async def AskingCommand(
     interaction: Interaction,
     question: str
 ) -> None:
-    if not (await has_account(interaction.user.id)):
+    if not (await has_account(interaction.user.id, interaction.guild_id)):
         raise Exception("Você precisa ter uma conta para executar esse comando.\n\nExecute /me")
 
-    user = await get_user_by_discord_user_id(interaction.user.id)
+    user = await get_user_by_discord_user_id(interaction.user.id, interaction.guild_id)
 
     pet = await get_pet(user.id)
     if pet is None:
@@ -53,7 +53,7 @@ async def AskingCommand(
         }, json={
           "q": question,
           "username": user.discord_nick,
-          "namespace": md5(f"{user.id}_{pet.id}".encode()).hexdigest(),
+          "namespace": md5(f"{user.id}_{pet.id}".encode()).hexdigest() if not has_manager else f"default_{user.discord_guild_id}",
           "personality": pet.personality,
           "swear_words": pet.swear_words,
           "informal_greeting": pet.informal_greeting
