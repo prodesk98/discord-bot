@@ -7,7 +7,7 @@ from database import AsyncDatabaseSession, Scores
 from sqlalchemy import delete
 
 
-async def remove_score():
+async def expired_score():
     async with AsyncDatabaseSession as session:
         await session.execute(
             delete(Scores).where(Scores.created_at <= datetime.now() - timedelta(days=15)) # type: ignore
@@ -17,7 +17,7 @@ async def remove_score():
 
 if __name__ == '__main__':
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(remove_score, 'interval', minutes=15)
+    scheduler.add_job(expired_score, 'interval', minutes=15)
     scheduler.start()
     print('Press Ctrl+{0} to exit'.format('Break' if os.name == 'nt' else 'C'))
 
