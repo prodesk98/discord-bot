@@ -57,6 +57,8 @@ async def QuizCommand(
     if not (await has_account(interaction.user.id, interaction.guild_id)):
         raise Exception("Você precisa ter uma conta para executar esse comando.\n\nExecute /me")
 
+    user = await get_user_by_discord_user_id(interaction.user.id, interaction.guild_id)
+
     has_quiz_opened = await aget(f"quiz:opened:{interaction.guild_id}")
     if has_quiz_opened is not None:
         raise Exception("Aguarde o encerramento do último quiz para abrir um novo.")
@@ -75,7 +77,8 @@ async def QuizCommand(
             "Authorization": f"Bearer {env.LEARN_BOT_AUTHORIZATION}"
         }, json={
           "theme": theme,
-          "amount": amount
+          "amount": amount,
+          "namespace": f"default_{user.discord_guild_id}"
         }) as response:
             if response.ok:
                 data: Quiz = Quiz(**loads(await response.content.read()))
