@@ -83,33 +83,36 @@ async def get_ranking_members_guild(guild_id: int, discord_guild_id: int) -> Lis
             )
         return ranking_members
 
-async def guild_members_count(guild_id: int) -> int:
+async def guild_members_count(guild_id: int, discord_guild_id: int) -> int:
     async with AsyncDatabaseSession as session:
         return normalize_value((await session.execute(
             select(func.count(User.id).label("members"))
             .select_from(Guild)
             .join(User)
+            .where(User.discord_guild_id == str(discord_guild_id)) # type: ignore
             .where(User.guild_id == guild_id) # type: ignore
             .group_by(User.guild_id)
         )).scalar())
 
-async def guild_scores_count(guild_id: int) -> int:
+async def guild_scores_count(guild_id: int, discord_guild_id: int) -> int:
     async with AsyncDatabaseSession as session:
         return normalize_value((await session.execute(
             select(func.sum(Scores.amount).label("xp"))
             .select_from(Scores)
             .join(User)
             .join(Guild)
+            .where(User.discord_guild_id == str(discord_guild_id))  # type: ignore
             .where(User.guild_id == guild_id) # type: ignore
             .where(User.id == Scores.user_id)
         )).scalar())
 
-async def recruit_guild(user_id: int) -> Guild:
+async def recruit_guild(user_id: int, discord_guild_id: int) -> Guild:
     async with AsyncDatabaseSession as session:
         guild_available = await session.execute(
             select(Guild.id, func.count(User.id).label("members"))
             .select_from(Guild)
             .outerjoin(User, Guild.id == User.guild_id) # type: ignore
+            .where(User.discord_guild_id == str(discord_guild_id))  # type: ignore
             .group_by(Guild.id)
             .order_by(asc("members"), asc(Guild.id)) # type: ignore
             .limit(1)
@@ -117,7 +120,7 @@ async def recruit_guild(user_id: int) -> Guild:
         available = guild_available.scalar()
 
         user: User = (await session.execute(
-                select(User).where(User.id == user_id) # type: ignore
+           select(User).where(User.id == user_id) # type: ignore
         )).scalar()
         user.guild_id = available
 
