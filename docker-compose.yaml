@@ -14,6 +14,9 @@ services:
       REDIS_DSN: "redis://default:${REDIS_PASSWORD}@cache:6379/0"
     volumes:
       - ./:/app
+    depends_on:
+      - postgres
+      - cache
 
   scheduler:
     container_name: scheduler
@@ -23,6 +26,8 @@ services:
       dockerfile: Docker/scheduler.Dockerfile
     env_file:
       - .env
+    depends_on:
+      - postgres
 
   cache:
     image: redis:latest
