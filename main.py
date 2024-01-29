@@ -69,7 +69,7 @@ async def guilds(interaction: Interaction):
     description="Criar um Quiz"
 )
 @app_commands.checks.cooldown(1, 60, key=lambda i: (i.guild_id, i.user.id))
-async def quiz(interaction: Interaction, tema: str, valor: int, rodadas: int):
+async def quiz(interaction: Interaction, tema: str, valor: int):
     await interaction.response.defer(ephemeral=False)
 
     if not has_bot_manager_permissions(interaction.user.roles):
