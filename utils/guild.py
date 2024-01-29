@@ -112,7 +112,7 @@ async def recruit_guild(user_id: int, discord_guild_id: int) -> Guild:
             select(Guild.id, func.count(User.id).label("members"))
             .select_from(Guild)
             .outerjoin(User, Guild.id == User.guild_id) # type: ignore
-            .outerjoin(User, User.discord_guild_id == str(discord_guild_id))  # type: ignore
+            .outerjoin(User.alias("u2"), User.discord_guild_id == str(discord_guild_id))  # type: ignore
             .group_by(Guild.id)
             .order_by(asc("members"), asc(Guild.id)) # type: ignore
             .limit(1)
