@@ -41,8 +41,14 @@ async def guild_ranking(discord_guild_id: int) -> List[GuildRanking]:
                 func.count(distinct(User.id)).label('members') # type: ignore
             )
             .select_from(Guild)
-            .outerjoin(User, Guild.id == User.guild_id) # type: ignore
-            .outerjoin(Scores, (User.id == Scores.user_id) & (User.guild_id == Guild.id) & (User.discord_guild_id == str(discord_guild_id)))
+            .outerjoin(
+                User,
+                ((Guild.id == User.guild_id) & (User.discord_guild_id == str(discord_guild_id)))) # type: ignore
+            .outerjoin(
+               Scores,
+               (User.id == Scores.user_id) &
+               (User.guild_id == Guild.id)
+            )
             .group_by(Guild.id, Guild.name)
             .order_by(desc("xp"), asc(Guild.id))  # type: ignore
             .limit(10)
