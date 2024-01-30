@@ -1,7 +1,7 @@
 from typing import List
 
 from database import AsyncDatabaseSession, Guild, User, Scores
-from sqlalchemy import select, func, asc, desc, distinct
+from sqlalchemy import select, func, asc, desc, distinct, null
 
 from models import GuildMemberRanking, GuildRanking
 from .math import  normalize_value
@@ -34,13 +34,15 @@ async def guild_ranking(discord_guild_id: int) -> List[GuildRanking]:
     result: List[GuildRanking] = []
     async with AsyncDatabaseSession as session:
         guilds = (await session.execute(
-            select(Guild.name, Guild.id, func.sum(Scores.amount).label('xp'), func.count(distinct(User.id)).label('members')) # type: ignore
+            select(
+                Guild.name,
+                Guild.id,
+                func.coalesce(func.sum(Scores.amount), 0).label('xp'),
+                func.count(distinct(User.id)).label('members') # type: ignore
+            )
             .select_from(Guild)
-            .outerjoin(User)
-            .outerjoin(Scores)
-            .where(User.discord_guild_id == str(discord_guild_id)) # type: ignore
-            .where(User.guild_id == Guild.id) # type: ignore
-            .where(User.id == Scores.user_id)
+            .outerjoin(User, Guild.id == User.guild_id) # type: ignore
+            .outerjoin(Scores, (User.id == Scores.user_id) & (User.guild_id == Guild.id) & (User.discord_guild_id == str(discord_guild_id)))
             .group_by(Guild.id, Guild.name)
             .order_by(desc("xp"), asc(Guild.id))  # type: ignore
             .limit(10)
@@ -59,17 +61,28 @@ async def guild_ranking(discord_guild_id: int) -> List[GuildRanking]:
 
 async def get_ranking_members_guild(guild_id: int, discord_guild_id: int) -> List[GuildMemberRanking]:
     async with AsyncDatabaseSession as session:
-        results = (await session.execute(
-            select(User.discord_user_id, func.sum(Scores.amount).label('xp'))
+        subquery = (
+            select(
+                User.discord_user_id,
+                func.coalesce(func.sum(Scores.amount), 0).label('xp')
+            )
             .select_from(Guild)
-            .join(User)
-            .join(Scores)
-            .where(Guild.id == guild_id) # type: ignore
-            .where(User.discord_guild_id == str(discord_guild_id))
-            .where(User.guild_id == Guild.id)
-            .where(User.id == Scores.user_id)
+            .outerjoin(User,
+                       ((Guild.id == guild_id) & (User.guild_id == guild_id) & (User.discord_guild_id == str(discord_guild_id))))  # type: ignore
+            .outerjoin(Scores, User.id == Scores.user_id) # type: ignore
             .group_by(User.discord_user_id, Guild.id)
-            .order_by(desc("xp"), asc(Guild.id)) # type: ignore
+            .order_by(desc("xp"), asc(Guild.id))  # type: ignore
+            .alias()
+        )
+        results = (await session.execute(
+            select(
+                subquery.c.discord_user_id,
+                func.sum(subquery.c.xp).label('xp')
+            )
+            .select_from(subquery)
+            .where(subquery.c.discord_user_id != null())
+            .group_by(subquery.c.discord_user_id)
+            .order_by(desc(func.sum(subquery.c.xp)), subquery.c.discord_user_id)
             .limit(10)
         )).fetchall()
         ranking_members: List[GuildMemberRanking] = []
@@ -106,12 +119,15 @@ async def guild_scores_count(guild_id: int, discord_guild_id: int) -> int:
             .where(User.id == Scores.user_id)
         )).scalar())
 
-async def recruit_guild(user_id: int) -> Guild:
+async def recruit_guild(user_id: int, discord_guild_id: int) -> Guild:
     async with AsyncDatabaseSession as session:
         guild_available = await session.execute(
-            select(Guild.id, func.count(User.id).label("members"))
+            select(
+                Guild.id,
+                func.count(User.id).label("members")
+            )
             .select_from(Guild)
-            .outerjoin(User, Guild.id == User.guild_id) # type: ignore
+            .outerjoin(User, ((Guild.id == User.guild_id) & (User.discord_guild_id == str(discord_guild_id)))) # type: ignore
             .group_by(Guild.id)
             .order_by(asc("members"), asc(Guild.id)) # type: ignore
             .limit(1)

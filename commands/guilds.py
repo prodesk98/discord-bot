@@ -16,7 +16,7 @@ async def MyGuildCommand(
 
     user_has_guild = await has_user_guild(user.id)
     if not user_has_guild:
-        recruit = await recruit_guild(user.id)
+        recruit = await recruit_guild(user.id, interaction.guild_id)
         recruit_embed = Embed(
             title=recruit.name,
             description=f"Você foi recrutado para a Guilda **{recruit.name}**.\n"
